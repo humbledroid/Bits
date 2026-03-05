@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kotlin Bits — Interactive Learning Hub</title>
+<style>
+  :root {
+    --bg: #0f0f1a;
+    --sidebar-bg: #161629;
+    --surface: #1e1e36;
+    --surface2: #2a2a4a;
+    --accent: #e94560;
+    --accent2: #7c3aed;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --cyan: #06b6d4;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --text-muted: #64748b;
+    --border: #2d2d50;
+    --sidebar-w: 280px;
+    --topbar-h: 0px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Layout ── */
+  .layout {
+    display: flex;
+    height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    transition: transform 0.3s ease;
+    z-index: 100;
+  }
+
+  .sidebar-header {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-header .logo {
+    font-size: 1.4em;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+
+  .sidebar-header .tagline {
+    font-size: 0.78em;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .sidebar-search {
+    padding: 12px 16px;
+  }
+
+  .sidebar-search input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.85em;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .sidebar-search input:focus {
+    border-color: var(--accent2);
+  }
+
+  .sidebar-search input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+
+  .sidebar-nav::-webkit-scrollbar { width: 4px; }
+  .sidebar-nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .nav-section-title {
+    font-size: 0.68em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    padding: 16px 20px 8px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-left: 3px solid transparent;
+    text-decoration: none;
+    color: var(--text-dim);
+    font-size: 0.9em;
+  }
+
+  .nav-item:hover {
+    background: rgba(124, 58, 237, 0.08);
+    color: var(--text);
+  }
+
+  .nav-item.active {
+    background: rgba(124, 58, 237, 0.12);
+    border-left-color: var(--accent);
+    color: var(--text);
+  }
+
+  .nav-item .icon {
+    font-size: 1.2em;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .nav-item .label {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  .nav-item .badge {
+    font-size: 0.65em;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-live { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+  .badge-soon { background: rgba(245, 158, 11, 0.15); color: var(--yellow); }
+  .badge-new { background: rgba(233, 69, 96, 0.15); color: var(--accent); }
+
+  .nav-item.disabled {
+    opacity: 0.4;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 0.75em;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .sidebar-footer a {
+    color: var(--accent2);
+    text-decoration: none;
+  }
+
+  /* ── Main Content ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .content-frame {
+    flex: 1;
+    border: none;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+  }
+
+  /* ── Welcome Screen (shown when no topic selected) ── */
+  .welcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+  }
+
+  .welcome .big-icon {
+    font-size: 4em;
+    margin-bottom: 20px;
+  }
+
+  .welcome h1 {
+    font-size: 2em;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+  }
+
+  .welcome p {
+    color: var(--text-dim);
+    max-width: 500px;
+    line-height: 1.7;
+    margin-bottom: 8px;
+  }
+
+  .welcome .topic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-top: 32px;
+    max-width: 700px;
+    width: 100%;
+  }
+
+  .topic-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .topic-card:hover {
+    border-color: var(--accent2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.15);
+  }
+
+  .topic-card.disabled {
+    opacity: 0.35;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .topic-card .card-icon { font-size: 1.8em; margin-bottom: 10px; }
+  .topic-card .card-title { font-weight: 700; font-size: 1em; margin-bottom: 4px; }
+  .topic-card .card-desc { font-size: 0.8em; color: var(--text-dim); line-height: 1.5; }
+
+  /* ── Mobile hamburger ── */
+  .hamburger {
+    display: none;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 200;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--sidebar-bg);
+    color: var(--text);
+    font-size: 1.3em;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 90;
+  }
+
+  @media (max-width: 768px) {
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      transform: translateX(-100%);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .hamburger { display: flex; }
+    .overlay.show { display: block; }
+    .welcome .topic-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">Kotlin Bits</div>
+      <div class="tagline">Interactive learning, one concept at a time</div>
+    </div>
+
+    <div class="sidebar-search">
+      <input type="text" placeholder="Search topics..." id="searchInput" oninput="filterNav(this.value)">
+    </div>
+
+    <nav class="sidebar-nav" id="sidebarNav">
+
+      <div class="nav-section-title">Fundamentals</div>
+
+      <a class="nav-item" data-topic="recursion" onclick="loadTopic('recursion', this)">
+        <span class="icon">&#x1f500;</span>
+        <span class="label">Recursion</span>
+        <span class="badge badge-live">Live</span>
+      </a>
+
+      <a class="nav-item disabled" data-topic="null-safety">
+        <span class="icon">&#x1f6e1;</span>
+        <span class="label">Null Safety</span>
+        <span class="badge badge-soon">Soon</span>
+      </a>
+
+      <a class="nav-item disabled" data-topic="generics">
+        <span class="icon">&#x1f9ec;</span>
+        <span class="label">Generics</span>
+        <span class="badge badge-soon">Soon</span>
+      </a>
+
+      <div class="nav-section-title">Concurrency</div>
+
+      <a class="nav-item disabled" data-topic="coroutines">
+        <span class="icon">&#x26a1;</span>
+        <span class="label">Coroutines</span>
+        <span class="badge badge-soon">Soon</span>
+      </a>
+
+      <a class="nav-item disabled" data-topic="flows">
+        <span class="icon">&#x1f30a;</span>
+        <span class="label">Flows</span>
+        <span class="badge badge-soon">Soon</span>
+      </a>
+
+      <div class="nav-section-title">Functional</div>
+
+      <a class="nav-item disabled" data-topic="higher-order">
+        <span class="icon">&#x1f3af;</span>
+        <span class="label">Higher-Order Functions</span>
+        <span class="badge badge-soon">Soon</span>
+      </a>
+
+      <a class="nav-item disabled" data-topic="sequences">
+        <span class="icon">&#x1f517;</span>
+        <span class="label">Sequences vs Lists</span>
+        <span class="badge badge-soon">Soon</span>
+      </a>
+
+      <div class="nav-section-title">Patterns</div>
+
+      <a class="nav-item disabled" data-topic="sealed-classes">
+        <span class="icon">&#x1f510;</span>
+        <span class="label">Sealed Classes</span>
+        <span class="badge badge-soon">Soon</span>
+      </a>
+
+      <a class="nav-item disabled" data-topic="delegation">
+        <span class="icon">&#x1f91d;</span>
+        <span class="label">Delegation</span>
+        <span class="badge badge-soon">Soon</span>
+      </a>
+
+      <a class="nav-item disabled" data-topic="dsl">
+        <span class="icon">&#x1f3d7;</span>
+        <span class="label">DSL Building</span>
+        <span class="badge badge-soon">Soon</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      Built with care for Kotlin learners
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main" id="main">
+    <!-- Welcome screen (default) -->
+    <div class="welcome" id="welcomeScreen">
+      <div class="big-icon">&#x1f9e0;</div>
+      <h1>Kotlin Bits</h1>
+      <p>Bite-sized, interactive lessons that make tricky Kotlin concepts stick. Each topic comes with visualizations, step-through animations, and quizzes.</p>
+      <p style="font-size: 0.85em; color: var(--text-muted);">Pick a topic from the sidebar to get started.</p>
+
+      <div class="topic-grid">
+        <div class="topic-card" onclick="loadTopic('recursion')">
+          <div class="card-icon">&#x1f500;</div>
+          <div class="card-title">Recursion</div>
+          <div class="card-desc">Call stacks, tail recursion, tree recursion — with interactive visualizations and 12 quizzes.</div>
+        </div>
+        <div class="topic-card disabled">
+          <div class="card-icon">&#x1f6e1;</div>
+          <div class="card-title">Null Safety</div>
+          <div class="card-desc">?. vs !! vs let — when to use what, with tricky edge case quizzes.</div>
+        </div>
+        <div class="topic-card disabled">
+          <div class="card-icon">&#x26a1;</div>
+          <div class="card-title">Coroutines</div>
+          <div class="card-desc">Suspend functions, dispatchers, structured concurrency — animated timelines.</div>
+        </div>
+        <div class="topic-card disabled">
+          <div class="card-icon">&#x1f9ec;</div>
+          <div class="card-title">Generics</div>
+          <div class="card-desc">In, out, star projection, reified — with type-checking playgrounds.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- iframe for loading topics -->
+    <iframe class="content-frame" id="contentFrame" style="display: none;" sandbox="allow-scripts allow-same-origin"></iframe>
+  </main>
+</div>
+
+<script>
+  // ── Topic Loading ──
+  const topicMap = {
+    'recursion': 'recursion/index.html',
+  };
+
+  let activeTopic = null;
+
+  function loadTopic(topic, navEl) {
+    if (!topicMap[topic]) return;
+
+    // Update iframe
+    const frame = document.getElementById('contentFrame');
+    const welcome = document.getElementById('welcomeScreen');
+
+    frame.src = topicMap[topic];
+    frame.style.display = 'block';
+    welcome.style.display = 'none';
+
+    // Update sidebar active state
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    if (navEl) {
+      navEl.classList.add('active');
+    } else {
+      const match = document.querySelector(`.nav-item[data-topic="${topic}"]`);
+      if (match) match.classList.add('active');
+    }
+
+    activeTopic = topic;
+
+    // Close sidebar on mobile
+    if (window.innerWidth <= 768) {
+      toggleSidebar();
+    }
+  }
+
+  // ── Sidebar Search/Filter ──
+  function filterNav(query) {
+    const q = query.toLowerCase().trim();
+    document.querySelectorAll('.nav-item').forEach(item => {
+      const label = item.querySelector('.label').textContent.toLowerCase();
+      const topic = item.getAttribute('data-topic') || '';
+      const match = !q || label.includes(q) || topic.includes(q);
+      item.style.display = match ? 'flex' : 'none';
+    });
+
+    // Hide section titles if all items in section are hidden
+    document.querySelectorAll('.nav-section-title').forEach(title => {
+      let next = title.nextElementSibling;
+      let anyVisible = false;
+      while (next && !next.classList.contains('nav-section-title')) {
+        if (next.style.display !== 'none' && next.classList.contains('nav-item')) {
+          anyVisible = true;
+        }
+        next = next.nextElementSibling;
+      }
+      title.style.display = anyVisible ? 'block' : 'none';
+    });
+  }
+
+  // ── Mobile Sidebar Toggle ──
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('show');
+  }
+
+  // ── Handle hash-based navigation ──
+  function handleHash() {
+    const hash = window.location.hash.replace('#', '');
+    if (hash && topicMap[hash]) {
+      loadTopic(hash);
+    }
+  }
+
+  window.addEventListener('hashchange', handleHash);
+  window.addEventListener('load', handleHash);
+
+  // ── Keyboard shortcut: Cmd/Ctrl+K to focus search ──
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      document.getElementById('searchInput').focus();
+    }
+    if (e.key === 'Escape') {
+      document.getElementById('searchInput').blur();
+      if (window.innerWidth <= 768) {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar.classList.contains('open')) toggleSidebar();
+      }
+    }
+  });
+</script>
+</body>
+</html>

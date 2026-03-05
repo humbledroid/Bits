@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recursion Mastery — Kotlin Edition</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #7c3aed;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --code-bg: #0d1117;
+    --border: #334155;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  .app {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  header {
+    text-align: center;
+    padding: 40px 0 30px;
+    border-bottom: 2px solid var(--surface2);
+    margin-bottom: 30px;
+  }
+
+  header h1 {
+    font-size: 2.4em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  header p { color: var(--text-dim); font-size: 1.1em; }
+
+  /* Navigation */
+  .nav {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+    background: var(--surface);
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .nav button {
+    flex: 1;
+    min-width: 100px;
+    padding: 10px 8px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .nav button:hover { background: var(--surface2); color: var(--text); }
+  .nav button.active { background: var(--accent); color: white; }
+  .nav button.completed { color: var(--green); }
+
+  /* Sections */
+  .section { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .section h2 {
+    font-size: 1.8em;
+    margin-bottom: 6px;
+    color: var(--accent);
+  }
+
+  .section h3 {
+    font-size: 1.3em;
+    margin: 24px 0 10px;
+    color: var(--accent2);
+  }
+
+  .section p { margin-bottom: 14px; color: var(--text); }
+
+  .highlight { color: var(--yellow); font-weight: 600; }
+  .accent { color: var(--accent); font-weight: 600; }
+
+  /* Code blocks */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin: 16px 0;
+    overflow-x: auto;
+    font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+    line-height: 1.6;
+    position: relative;
+  }
+
+  .code-block .lang-tag {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 0.7em;
+    color: var(--text-dim);
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .kw { color: #c678dd; }
+  .fn { color: #61afef; }
+  .str { color: #98c379; }
+  .num { color: #d19a66; }
+  .cm { color: #5c6370; font-style: italic; }
+  .tp { color: #e5c07b; }
+  .op { color: #56b6c2; }
+
+  /* Call stack visualization */
+  .call-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 20px 0;
+  }
+
+  .stack-frame {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-left: 0;
+    transition: all 0.4s ease;
+    position: relative;
+  }
+
+  .stack-frame.active {
+    border-color: var(--accent);
+    background: rgba(233, 69, 96, 0.1);
+    box-shadow: 0 0 15px rgba(233, 69, 96, 0.2);
+  }
+
+  .stack-frame.returning {
+    border-color: var(--green);
+    background: rgba(16, 185, 129, 0.1);
+  }
+
+  .stack-frame .label {
+    font-family: monospace;
+    font-size: 0.95em;
+    font-weight: 600;
+  }
+
+  .stack-frame .result {
+    font-family: monospace;
+    color: var(--green);
+    font-size: 0.85em;
+    margin-top: 4px;
+  }
+
+  .stack-connector {
+    width: 2px;
+    height: 20px;
+    background: var(--border);
+    margin-left: 30px;
+  }
+
+  /* Visualization controls */
+  .viz-controls {
+    display: flex;
+    gap: 10px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+  }
+
+  .viz-controls button {
+    padding: 8px 20px;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .viz-controls button:hover {
+    background: var(--accent);
+    color: white;
+  }
+
+  .viz-controls button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .speed-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+    font-size: 0.85em;
+  }
+
+  /* Tree visualization */
+  .tree-container {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 16px 0;
+    overflow-x: auto;
+    min-height: 200px;
+  }
+
+  .tree-container svg { width: 100%; }
+
+  .tree-node {
+    transition: all 0.3s ease;
+  }
+
+  .tree-node circle {
+    stroke-width: 2;
+    transition: all 0.3s ease;
+  }
+
+  .tree-node text {
+    font-family: monospace;
+    font-size: 12px;
+    fill: var(--text);
+  }
+
+  .tree-edge {
+    stroke: var(--border);
+    stroke-width: 1.5;
+    fill: none;
+  }
+
+  /* Quiz */
+  .quiz-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0;
+  }
+
+  .quiz-card h4 {
+    color: var(--yellow);
+    margin-bottom: 4px;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .quiz-card .question {
+    font-size: 1.1em;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  .quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .quiz-option {
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: var(--code-bg);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.95em;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+
+  .quiz-option:hover:not(:disabled) {
+    border-color: var(--accent2);
+    background: rgba(124, 58, 237, 0.1);
+  }
+
+  .quiz-option.correct {
+    border-color: var(--green);
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--green);
+  }
+
+  .quiz-option.wrong {
+    border-color: var(--accent);
+    background: rgba(233, 69, 96, 0.15);
+    color: var(--accent);
+  }
+
+  .quiz-explanation {
+    margin-top: 14px;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    line-height: 1.6;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .quiz-explanation.correct {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--green);
+  }
+
+  .quiz-explanation.wrong {
+    background: rgba(233, 69, 96, 0.1);
+    border: 1px solid rgba(233, 69, 96, 0.3);
+    color: #fca5a5;
+  }
+
+  /* Analogy boxes */
+  .analogy {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(233, 69, 96, 0.1));
+    border: 1px solid var(--accent2);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin: 18px 0;
+  }
+
+  .analogy .title {
+    font-weight: 700;
+    color: var(--accent2);
+    margin-bottom: 6px;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    height: 4px;
+    background: var(--surface);
+    border-radius: 2px;
+    margin-bottom: 30px;
+    overflow: hidden;
+  }
+
+  .progress-bar .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  /* Interactive playground */
+  .playground {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+  }
+
+  .playground input {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: monospace;
+    font-size: 1em;
+    width: 80px;
+    text-align: center;
+  }
+
+  .playground input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  /* Score card */
+  .score-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    color: var(--green);
+    margin-bottom: 16px;
+  }
+
+  /* Next button */
+  .next-btn {
+    display: block;
+    margin: 30px auto 0;
+    padding: 12px 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 1em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .next-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(233, 69, 96, 0.3);
+  }
+
+  .mental-model {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin: 18px 0;
+  }
+
+  .mental-model .title {
+    font-weight: 700;
+    color: var(--yellow);
+    margin-bottom: 6px;
+  }
+
+  .indent { margin-left: 20px; }
+
+  .step-trace {
+    font-family: monospace;
+    font-size: 0.88em;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 12px 0;
+    line-height: 1.8;
+  }
+
+  .step-trace .call { color: #61afef; }
+  .step-trace .ret { color: var(--green); }
+  .step-trace .arrow { color: var(--accent); }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .app { padding: 12px; }
+    header h1 { font-size: 1.6em; }
+    .nav button { font-size: 0.75em; padding: 8px 4px; min-width: 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="root"></div>
+
+<script>
+// ── State ──
+let currentSection = 0;
+let quizAnswers = {};
+let vizStates = {};
+let playgroundValues = {};
+
+const sections = [
+  "The Core Idea",
+  "Anatomy",
+  "Call Stack",
+  "Factorial",
+  "Fibonacci",
+  "Tail Recursion",
+  "Patterns",
+  "Final Quiz"
+];
+
+// ── Rendering engine ──
+function render() {
+  const app = document.getElementById('root');
+  app.innerHTML = `
+    <header>
+      <h1>Recursion Mastery</h1>
+      <p>Kotlin Edition — From confusion to intuition</p>
+    </header>
+    <div class="progress-bar"><div class="fill" style="width: ${((currentSection + 1) / sections.length) * 100}%"></div></div>
+    <nav class="nav">
+      ${sections.map((s, i) => `
+        <button class="${i === currentSection ? 'active' : ''} ${quizAnswers['section_' + i] ? 'completed' : ''}"
+                onclick="goTo(${i})">${s}</button>
+      `).join('')}
+    </nav>
+    <div class="section">
+      ${renderSection(currentSection)}
+    </div>
+  `;
+  // Re-run any viz animations
+  if (currentSection === 2 || currentSection === 3 || currentSection === 4) {
+    initViz(currentSection);
+  }
+}
+
+function goTo(i) { currentSection = i; render(); window.scrollTo({top: 0, behavior: 'smooth'}); }
+function nextSection() { if (currentSection < sections.length - 1) { currentSection++; render(); window.scrollTo({top: 0, behavior: 'smooth'}); } }
+
+// ── Section Renderers ──
+function renderSection(i) {
+  switch(i) {
+    case 0: return renderCoreIdea();
+    case 1: return renderAnatomy();
+    case 2: return renderCallStack();
+    case 3: return renderFactorial();
+    case 4: return renderFibonacci();
+    case 5: return renderTailRecursion();
+    case 6: return renderPatterns();
+    case 7: return renderFinalQuiz();
+  }
+}
+
+// ════════════════════════════════════════
+// SECTION 0: The Core Idea
+// ════════════════════════════════════════
+function renderCoreIdea() {
+  return `
+    <h2>What Recursion Actually Is</h2>
+    <p>Forget the textbook definition for a second. Here's the <span class="highlight">one mental shift</span> that makes recursion click:</p>
+
+    <div class="analogy">
+      <div class="title">The Russian Doll Analogy</div>
+      <p>You have a Russian doll. To find what's inside the smallest one, you open a doll and find... another doll. You keep opening until you hit the tiny solid one at the center. Then you put them all back together.</p>
+      <p>Recursion is <strong>exactly</strong> this: a function that opens a slightly smaller version of the same problem until it hits a version so small it already knows the answer.</p>
+    </div>
+
+    <p>In programming terms, recursion is when <span class="accent">a function calls itself</span> with a <span class="highlight">smaller or simpler input</span>, and has a <span class="highlight">stopping condition</span> (base case) so it doesn't go on forever.</p>
+
+    <div class="mental-model">
+      <div class="title">The Two Things Every Recursive Function Needs</div>
+      <p><strong>1. Base case:</strong> "If the problem is this small, I already know the answer. Stop."</p>
+      <p><strong>2. Recursive case:</strong> "Otherwise, solve a slightly smaller version of the same problem and use that result."</p>
+    </div>
+
+    <p>That's it. If you understand those two pieces, you understand recursion. Everything else is just seeing the pattern in different problems.</p>
+
+    <h3>Your First Kotlin Recursive Function</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin</span>
+      <span class="kw">fun</span> <span class="fn">countdown</span>(<span class="tp">n</span>: <span class="tp">Int</span>) {
+    <span class="kw">if</span> (n == <span class="num">0</span>) {                <span class="cm">// Base case: stop here</span>
+        <span class="fn">println</span>(<span class="str">"Liftoff!"</span>)
+        <span class="kw">return</span>
+    }
+    <span class="fn">println</span>(n)                    <span class="cm">// Do something</span>
+    <span class="fn">countdown</span>(n - <span class="num">1</span>)             <span class="cm">// Recursive case: smaller problem</span>
+}
+
+<span class="fn">countdown</span>(<span class="num">3</span>)
+<span class="cm">// Prints: 3, 2, 1, Liftoff!</span>
+    </div>
+
+    <p>Read it out loud: "If n is 0, say Liftoff. Otherwise, print n, then count down from n-1." That's recursion — <span class="highlight">describing a big task in terms of a smaller version of itself</span>.</p>
+
+    ${renderQuiz('q0',
+      'What happens if you remove the base case (the if n == 0 check)?',
+      [
+        'It prints 0 and stops',
+        'It runs forever (stack overflow)',
+        'It prints negative numbers then stops',
+        'Kotlin compiler catches the error'
+      ],
+      1,
+      "Without a base case, countdown(3) calls countdown(2), which calls countdown(1), then countdown(0), then countdown(-1), then countdown(-2)... forever. Kotlin doesn't know when to stop. Eventually you get a StackOverflowError — the call stack runs out of space. This is why the base case is non-negotiable."
+    )}
+
+    <button class="next-btn" onclick="nextSection()">Next: Anatomy of Recursion →</button>
+  `;
+}
+
+// ════════════════════════════════════════
+// SECTION 1: Anatomy
+// ════════════════════════════════════════
+function renderAnatomy() {
+  return `
+    <h2>Anatomy of a Recursive Function</h2>
+    <p>Every recursive function has exactly the same skeleton. Once you see it, you'll recognize it everywhere.</p>
+
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — The Template</span>
+<span class="kw">fun</span> <span class="fn">solve</span>(<span class="tp">problem</span>: <span class="tp">Input</span>): <span class="tp">Output</span> {
+
+    <span class="cm">// PART 1: Base case(s)</span>
+    <span class="kw">if</span> (problem is small enough) {
+        <span class="kw">return</span> known answer
+    }
+
+    <span class="cm">// PART 2: Recursive case</span>
+    <span class="kw">val</span> smallerResult = <span class="fn">solve</span>(smaller version of problem)
+
+    <span class="cm">// PART 3: Combine</span>
+    <span class="kw">return</span> combine(current info, smallerResult)
+}
+    </div>
+
+    <h3>Let's map this to a real function — summing a list</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin</span>
+<span class="kw">fun</span> <span class="fn">sum</span>(<span class="tp">list</span>: <span class="tp">List</span>&lt;<span class="tp">Int</span>&gt;): <span class="tp">Int</span> {
+
+    <span class="cm">// Base case: empty list sums to 0</span>
+    <span class="kw">if</span> (list.<span class="fn">isEmpty</span>()) <span class="kw">return</span> <span class="num">0</span>
+
+    <span class="cm">// Recursive case: first element + sum of the rest</span>
+    <span class="kw">return</span> list.<span class="fn">first</span>() + <span class="fn">sum</span>(list.<span class="fn">drop</span>(<span class="num">1</span>))
+}
+
+<span class="fn">sum</span>(<span class="fn">listOf</span>(<span class="num">3</span>, <span class="num">7</span>, <span class="num">2</span>))  <span class="cm">// → 12</span>
+    </div>
+
+    <div class="mental-model">
+      <div class="title">Read It Like English</div>
+      <p>"The sum of an empty list is 0. The sum of any other list is the first element plus the sum of everything after it."</p>
+      <p>That's a <strong>definition</strong>, not a loop. Recursion is about defining what something <em>is</em>, not telling the computer step-by-step what to do.</p>
+    </div>
+
+    <h3>How does <code>sum(listOf(3, 7, 2))</code> actually execute?</h3>
+    <div class="step-trace">
+      <span class="call">sum([3, 7, 2])</span><br>
+      &nbsp;&nbsp;<span class="arrow">→</span> 3 + <span class="call">sum([7, 2])</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">→</span> 7 + <span class="call">sum([2])</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">→</span> 2 + <span class="call">sum([])</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">→</span> <span class="ret">0</span> &nbsp; <span class="cm">// base case!</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">←</span> 2 + 0 = <span class="ret">2</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">←</span> 7 + 2 = <span class="ret">9</span><br>
+      &nbsp;&nbsp;<span class="arrow">←</span> 3 + 9 = <span class="ret">12</span><br>
+    </div>
+
+    <p>Notice the shape: it <span class="accent">goes down</span> (making calls), hits the base case, then <span class="highlight">comes back up</span> (combining results). This "down-then-up" is the heartbeat of recursion.</p>
+
+    ${renderQuiz('q1',
+      'In the sum function, what is the "smaller version of the problem"?',
+      [
+        'list.first()',
+        'list.drop(1) — the list without its first element',
+        'list.size - 1',
+        'list.last()'
+      ],
+      1,
+      "Each recursive call passes list.drop(1) — the same list but with the first element removed. That's one element shorter, so it's guaranteed to eventually reach the empty list (base case). The key insight: the 'smaller version' must actually get closer to the base case every time."
+    )}
+
+    ${renderQuiz('q1b',
+      'What would happen if we wrote: return list.first() + sum(list) instead of sum(list.drop(1))?',
+      [
+        'Same result, just slower',
+        'Infinite recursion — the input never gets smaller',
+        'It skips the first element',
+        'Compiler error'
+      ],
+      1,
+      "If you call sum(list) instead of sum(list.drop(1)), you're passing the EXACT same list back in. It never shrinks, so you never reach the empty-list base case. Infinite recursion → StackOverflowError. The recursive call MUST make progress toward the base case."
+    )}
+
+    <button class="next-btn" onclick="nextSection()">Next: The Call Stack →</button>
+  `;
+}
+
+// ════════════════════════════════════════
+// SECTION 2: Call Stack Visualization
+// ════════════════════════════════════════
+function renderCallStack() {
+  const state = vizStates[2] || { step: -1, playing: false };
+  vizStates[2] = state;
+
+  const frames = [
+    { call: 'sum([3, 7, 2])', depth: 0, result: null },
+    { call: 'sum([7, 2])', depth: 1, result: null },
+    { call: 'sum([2])', depth: 2, result: null },
+    { call: 'sum([])', depth: 3, result: '0' },
+    { call: 'sum([2])', depth: 2, result: '2 + 0 = 2' },
+    { call: 'sum([7, 2])', depth: 1, result: '7 + 2 = 9' },
+    { call: 'sum([3, 7, 2])', depth: 0, result: '3 + 9 = 12' },
+  ];
+
+  const step = state.step;
+
+  // Build visible stack
+  let stackHTML = '';
+  if (step >= 0) {
+    let visibleFrames = [];
+    if (step <= 3) {
+      // Building up the stack
+      for (let i = 0; i <= step; i++) {
+        visibleFrames.push({
+          ...frames[i],
+          isActive: i === step,
+          isReturning: false,
+          showResult: i === 3 && step === 3
+        });
+      }
+    } else {
+      // Unwinding
+      const returnIdx = step - 3; // 1, 2, 3
+      for (let i = 3 - returnIdx; i <= 3; i++) {
+        const f = frames[i];
+        const returnFrame = step <= 3 ? null : frames[step];
+        visibleFrames.push({
+          call: f.call,
+          depth: f.depth,
+          isActive: false,
+          isReturning: f.depth === returnFrame.depth,
+          showResult: f.depth >= returnFrame.depth,
+          result: f.depth === 3 ? '0' : frames[step - (3 - f.depth) + (f.depth > returnFrame.depth ? 0 : 0)].result
+        });
+      }
+      // Simpler approach:
+      visibleFrames = [];
+      const unwindTo = 3 - (step - 3);
+      for (let i = unwindTo; i <= 3; i++) {
+        const rIdx = 3 + (3 - i); // map back
+        visibleFrames.push({
+          call: frames[i].call,
+          depth: frames[i].depth,
+          isActive: false,
+          isReturning: i === unwindTo,
+          showResult: true,
+          result: i === 3 ? '0' : (i === 2 ? '2 + 0 = 2' : (i === 1 ? '7 + 2 = 9' : '3 + 9 = 12'))
+        });
+      }
+    }
+
+    stackHTML = '<div class="call-stack">';
+    for (let i = 0; i < visibleFrames.length; i++) {
+      const f = visibleFrames[i];
+      if (i > 0) stackHTML += '<div class="stack-connector"></div>';
+      stackHTML += `
+        <div class="stack-frame ${f.isActive ? 'active' : ''} ${f.isReturning ? 'returning' : ''}" style="margin-left: ${f.depth * 24}px">
+          <div class="label">${f.call}</div>
+          ${f.showResult && f.result ? `<div class="result">↩ ${f.result}</div>` : ''}
+        </div>`;
+    }
+    stackHTML += '</div>';
+  }
+
+  const stepLabels = [
+    "sum([3,7,2]) is called. It can't return yet — needs sum([7,2]) first.",
+    "sum([7,2]) is stacked on top. It needs sum([2]) first.",
+    "sum([2]) is stacked. It needs sum([]) first.",
+    "sum([]) hits the base case! Returns 0. Stack starts unwinding.",
+    "sum([2]) can now finish: 2 + 0 = 2. Returns up.",
+    "sum([7,2]) can now finish: 7 + 2 = 9. Returns up.",
+    "sum([3,7,2]) finally finishes: 3 + 9 = 12. Done!"
+  ];
+
+  return `
+    <h2>The Call Stack — See It Happen</h2>
+    <p>The call stack is where your computer keeps track of "what called what." Each recursive call adds a <span class="accent">frame</span> to the stack. When a call returns, its frame is removed. Watch it happen:</p>
+
+    <div class="playground">
+      <div class="viz-controls">
+        <button onclick="vizStep(2, -1)" ${step <= -1 ? 'disabled' : ''}>← Back</button>
+        <button onclick="vizStep(2, 1)" ${step >= 6 ? 'disabled' : ''}>Step →</button>
+        <button onclick="vizReset(2)">Reset</button>
+      </div>
+      ${step >= 0 ? `<p style="margin: 12px 0; color: var(--yellow); font-size: 0.92em;"><strong>Step ${step + 1}/7:</strong> ${stepLabels[step]}</p>` : '<p style="color: var(--text-dim);">Click <strong>Step →</strong> to watch the call stack build and unwind.</p>'}
+      ${stackHTML}
+    </div>
+
+    <div class="mental-model">
+      <div class="title">Key Insight: Recursion Is a Stack</div>
+      <p>Every recursive call <strong>pauses</strong> the current function and starts a new one on top. The paused functions are waiting patiently, each holding onto its own local variables. When the innermost call returns, the one below it resumes, uses that return value, and returns to the one below <em>it</em>.</p>
+      <p>This is why infinite recursion causes a <code>StackOverflowError</code> — you run out of stack space before anything returns.</p>
+    </div>
+
+    ${renderQuiz('q2',
+      'At the deepest point of sum([3,7,2]), how many function calls are waiting on the stack simultaneously?',
+      [
+        '2',
+        '3',
+        '4 (including the base case call)',
+        '7'
+      ],
+      2,
+      "There are 4 frames: sum([3,7,2]), sum([7,2]), sum([2]), and sum([]). The first three are all paused, waiting for the one above them to return. sum([]) is the active one that hits the base case. This is why recursion depth matters — for a list of N elements, you need N+1 stack frames."
+    )}
+
+    <button class="next-btn" onclick="nextSection()">Next: Factorial Deep Dive →</button>
+  `;
+}
+
+// ════════════════════════════════════════
+// SECTION 3: Factorial
+// ════════════════════════════════════════
+function renderFactorial() {
+  const n = playgroundValues['factorial'] || 5;
+
+  return `
+    <h2>Factorial — The Classic</h2>
+    <p>Factorial is the "hello world" of recursion because the recursive definition is so clean:</p>
+
+    <div class="analogy">
+      <div class="title">Mathematical Definition</div>
+      <p><code>0! = 1</code> (base case)</p>
+      <p><code>n! = n × (n-1)!</code> (recursive case)</p>
+      <p>That's literally the code. Recursion lets you translate math definitions directly into programs.</p>
+    </div>
+
+    <div class="code-block">
+      <span class="lang-tag">Kotlin</span>
+<span class="kw">fun</span> <span class="fn">factorial</span>(<span class="tp">n</span>: <span class="tp">Int</span>): <span class="tp">Long</span> {
+    <span class="kw">if</span> (n == <span class="num">0</span>) <span class="kw">return</span> <span class="num">1</span>           <span class="cm">// 0! = 1</span>
+    <span class="kw">return</span> n * <span class="fn">factorial</span>(n - <span class="num">1</span>)    <span class="cm">// n! = n × (n-1)!</span>
+}
+    </div>
+
+    <h3>Interactive Trace</h3>
+    <div class="playground">
+      <p style="margin-bottom: 10px;">Enter a number (1-10):
+        <input type="number" min="1" max="10" value="${n}" onchange="playgroundValues['factorial']=Math.min(10,Math.max(1,parseInt(this.value)||5));render()">
+      </p>
+      <div class="step-trace">
+        ${generateFactorialTrace(n)}
+      </div>
+    </div>
+
+    <h3>Think About It Differently</h3>
+    <p>When you call <code>factorial(5)</code>, you're really saying:</p>
+    <div class="step-trace">
+<span class="cm">// "I don't know 5!, but if someone tells me 4!, I can just multiply by 5"</span>
+<span class="cm">// "I don't know 4!, but if someone tells me 3!, I can just multiply by 4"</span>
+<span class="cm">// "I don't know 3!, but if someone tells me 2!, I can just multiply by 3"</span>
+<span class="cm">// "I don't know 2!, but if someone tells me 1!, I can just multiply by 2"</span>
+<span class="cm">// "I don't know 1!, but if someone tells me 0!, I can just multiply by 1"</span>
+<span class="cm">// "I KNOW 0! = 1!"  ← base case, chain of trust resolves</span>
+    </div>
+
+    <div class="mental-model">
+      <div class="title">The "Leap of Faith" Technique</div>
+      <p>When <em>writing</em> recursive functions, don't trace the whole execution in your head. Instead:</p>
+      <p><strong>1.</strong> Assume the recursive call works correctly (the leap of faith).</p>
+      <p><strong>2.</strong> Ask: "If <code>factorial(n-1)</code> gives me the right answer, can I use it to compute <code>factorial(n)</code>?"</p>
+      <p><strong>3.</strong> Yes: just multiply by n. Done.</p>
+      <p>This is the single most important trick for writing recursive code. Trust the recursion.</p>
+    </div>
+
+    ${renderQuiz('q3',
+      'You\'re writing a recursive function to reverse a string. Using the "leap of faith," which of these is the correct approach?',
+      [
+        'Manually swap all characters',
+        'Assume reverse(s.drop(1)) works, then append s.first() to the end',
+        'Call reverse(s) and hope it works',
+        'Use a loop inside the recursive function'
+      ],
+      1,
+      'Using the leap of faith: reverse("hello") = reverse("ello") + "h". You trust that reverse("ello") gives "olle", then you just tack "h" on the end → "olleh". The base case is an empty string or single char (returns itself). You never need to think about the full chain — just one step.'
+    )}
+
+    <button class="next-btn" onclick="nextSection()">Next: Fibonacci & Tree Recursion →</button>
+  `;
+}
+
+function generateFactorialTrace(n) {
+  let lines = [];
+  // Going down
+  for (let i = n; i >= 1; i--) {
+    const indent = '&nbsp;&nbsp;'.repeat(n - i);
+    lines.push(`${indent}<span class="call">factorial(${i})</span>`);
+    lines.push(`${indent}<span class="arrow">→</span> ${i} * <span class="call">factorial(${i-1})</span>`);
+  }
+  const baseIndent = '&nbsp;&nbsp;'.repeat(n);
+  lines.push(`${baseIndent}<span class="call">factorial(0)</span> <span class="arrow">→</span> <span class="ret">1</span> <span class="cm">// base case</span>`);
+  // Going back up
+  let result = 1;
+  for (let i = 1; i <= n; i++) {
+    result *= i;
+    const indent = '&nbsp;&nbsp;'.repeat(n - i);
+    lines.push(`${indent}<span class="arrow">←</span> ${i} × ${result/i} = <span class="ret">${result}</span>`);
+  }
+  return lines.join('<br>');
+}
+
+// ════════════════════════════════════════
+// SECTION 4: Fibonacci
+// ════════════════════════════════════════
+function renderFibonacci() {
+  return `
+    <h2>Fibonacci & Tree Recursion</h2>
+    <p>Fibonacci introduces a new pattern: a function that calls itself <span class="accent">twice</span>. This creates a <span class="highlight">tree</span> of calls, not a straight line.</p>
+
+    <div class="code-block">
+      <span class="lang-tag">Kotlin</span>
+<span class="kw">fun</span> <span class="fn">fib</span>(<span class="tp">n</span>: <span class="tp">Int</span>): <span class="tp">Int</span> {
+    <span class="kw">if</span> (n <= <span class="num">1</span>) <span class="kw">return</span> n          <span class="cm">// fib(0)=0, fib(1)=1</span>
+    <span class="kw">return</span> <span class="fn">fib</span>(n - <span class="num">1</span>) + <span class="fn">fib</span>(n - <span class="num">2</span>) <span class="cm">// two recursive calls!</span>
+}
+    </div>
+
+    <h3>The Call Tree for fib(5)</h3>
+    <div class="tree-container" id="fib-tree">
+      <pre style="color: var(--text); font-size: 0.78em; line-height: 1.4; overflow-x: auto;">
+                          fib(5)
+                       /         \\
+                  fib(4)          fib(3)
+                /       \\        /      \\
+           fib(3)     fib(2)  fib(2)   fib(1)
+           /    \\     /    \\   /    \\     <span style="color:var(--green)">= 1</span>
+       fib(2) fib(1) fib(1) fib(0) fib(1) fib(0)
+       /    \\   <span style="color:var(--green)">= 1</span>  <span style="color:var(--green)">= 1</span>   <span style="color:var(--green)">= 0</span>   <span style="color:var(--green)">= 1</span>   <span style="color:var(--green)">= 0</span>
+   fib(1) fib(0)
+    <span style="color:var(--green)">= 1</span>    <span style="color:var(--green)">= 0</span>
+      </pre>
+    </div>
+
+    <p>See the problem? <code>fib(3)</code> is computed <strong>twice</strong>. <code>fib(2)</code> is computed <strong>three times</strong>. This gets exponentially worse as n grows.</p>
+
+    <div class="mental-model">
+      <div class="title">Why This Matters</div>
+      <p><code>fib(30)</code> makes over <strong>2.6 million</strong> function calls. <code>fib(50)</code> would take minutes. The tree grows exponentially because we keep recomputing the same subproblems.</p>
+      <p>The fix? <strong>Memoization</strong> — cache results so each value is only computed once:</p>
+    </div>
+
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — Memoized</span>
+<span class="kw">fun</span> <span class="fn">fib</span>(<span class="tp">n</span>: <span class="tp">Int</span>, <span class="tp">memo</span>: <span class="tp">MutableMap</span>&lt;<span class="tp">Int</span>, <span class="tp">Int</span>&gt; = <span class="fn">mutableMapOf</span>()): <span class="tp">Int</span> {
+    <span class="kw">if</span> (n <= <span class="num">1</span>) <span class="kw">return</span> n
+    <span class="kw">if</span> (n <span class="kw">in</span> memo) <span class="kw">return</span> memo[n]!!    <span class="cm">// already computed? return it</span>
+
+    <span class="kw">val</span> result = <span class="fn">fib</span>(n - <span class="num">1</span>, memo) + <span class="fn">fib</span>(n - <span class="num">2</span>, memo)
+    memo[n] = result                     <span class="cm">// cache for later</span>
+    <span class="kw">return</span> result
+}
+
+<span class="fn">fib</span>(<span class="num">50</span>)  <span class="cm">// now instant instead of minutes</span>
+    </div>
+
+    <p>Memoization turns tree recursion back into a straight line — each subproblem is solved once and looked up thereafter.</p>
+
+    ${renderQuiz('q4',
+      'Why does naive fib(n) have exponential time complexity while factorial(n) is linear?',
+      [
+        'Fibonacci uses bigger numbers',
+        'Factorial has a better base case',
+        'Factorial makes 1 recursive call per step; Fibonacci makes 2, creating a tree',
+        'Kotlin optimizes factorial but not fibonacci'
+      ],
+      2,
+      "factorial(n) calls factorial(n-1) once → straight chain of n calls → O(n). fib(n) calls fib(n-1) AND fib(n-2) → each of those makes two calls → binary tree of calls → O(2^n). The number of recursive calls per step determines whether you get a chain (linear) or a tree (exponential)."
+    )}
+
+    <button class="next-btn" onclick="nextSection()">Next: Tail Recursion →</button>
+  `;
+}
+
+// ════════════════════════════════════════
+// SECTION 5: Tail Recursion
+// ════════════════════════════════════════
+function renderTailRecursion() {
+  return `
+    <h2>Tail Recursion — Kotlin's Superpower</h2>
+    <p>Remember how every recursive call adds a frame to the stack? For large inputs, that's a problem. Kotlin has a solution: the <code class="accent">tailrec</code> keyword.</p>
+
+    <h3>Regular recursion vs Tail recursion</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — Regular (NOT tail recursive)</span>
+<span class="kw">fun</span> <span class="fn">factorial</span>(<span class="tp">n</span>: <span class="tp">Int</span>): <span class="tp">Long</span> {
+    <span class="kw">if</span> (n == <span class="num">0</span>) <span class="kw">return</span> <span class="num">1</span>
+    <span class="kw">return</span> n * <span class="fn">factorial</span>(n - <span class="num">1</span>)  <span class="cm">// NOT tail: must multiply AFTER call returns</span>
+}
+    </div>
+
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — Tail recursive</span>
+<span class="kw">tailrec</span> <span class="kw">fun</span> <span class="fn">factorial</span>(<span class="tp">n</span>: <span class="tp">Int</span>, <span class="tp">acc</span>: <span class="tp">Long</span> = <span class="num">1</span>): <span class="tp">Long</span> {
+    <span class="kw">if</span> (n == <span class="num">0</span>) <span class="kw">return</span> acc
+    <span class="kw">return</span> <span class="fn">factorial</span>(n - <span class="num">1</span>, n * acc)  <span class="cm">// Tail: recursive call is the LAST thing</span>
+}
+    </div>
+
+    <div class="mental-model">
+      <div class="title">What Makes It "Tail" Recursive?</div>
+      <p>A call is in <strong>tail position</strong> when the recursive call is the <em>very last thing</em> the function does — nothing happens after it returns. No multiplication, no addition, no processing of the result.</p>
+      <p><strong>Regular:</strong> <code>return n * factorial(n-1)</code> — must wait for result, then multiply. Stack frame needed.</p>
+      <p><strong>Tail:</strong> <code>return factorial(n-1, n*acc)</code> — nothing to do after. Stack frame can be reused.</p>
+    </div>
+
+    <p>The trick is the <span class="highlight">accumulator parameter</span> (<code>acc</code>). Instead of doing work <em>after</em> the recursive call returns, you do the work <em>before</em> by passing the partial result forward.</p>
+
+    <h3>Trace the difference</h3>
+    <div class="step-trace">
+<span class="cm">// Regular: builds up pending multiplications</span>
+<span class="call">factorial(4)</span>
+  4 * <span class="call">factorial(3)</span>
+    3 * <span class="call">factorial(2)</span>
+      2 * <span class="call">factorial(1)</span>
+        1 * <span class="call">factorial(0)</span>
+          <span class="ret">1</span>         <span class="cm">← now unwind and multiply all the way back up</span>
+
+<span class="cm">// Tail recursive: carries result forward, nothing to unwind</span>
+<span class="call">factorial(4, 1)</span>
+<span class="call">factorial(3, 4)</span>      <span class="cm">// acc = 4 * 1</span>
+<span class="call">factorial(2, 12)</span>     <span class="cm">// acc = 3 * 4</span>
+<span class="call">factorial(1, 24)</span>     <span class="cm">// acc = 2 * 12</span>
+<span class="call">factorial(0, 24)</span>     <span class="cm">// acc = 1 * 24</span>
+<span class="ret">→ 24</span>                  <span class="cm">← done! no unwinding needed</span>
+    </div>
+
+    <p>When you mark a function <code>tailrec</code>, the Kotlin compiler converts it into a simple <strong>loop</strong> under the hood. Same readability of recursion, same performance as iteration. Zero stack growth.</p>
+
+    ${renderQuiz('q5',
+      'Which of these is a valid tail-recursive version of sum?',
+      [
+        'tailrec fun sum(list: List<Int>): Int = if (list.isEmpty()) 0 else list.first() + sum(list.drop(1))',
+        'tailrec fun sum(list: List<Int>, acc: Int = 0): Int = if (list.isEmpty()) acc else sum(list.drop(1), acc + list.first())',
+        'tailrec fun sum(list: List<Int>): Int = sum(list) + 0',
+        'fun sum(list: List<Int>): Int = list.fold(0) { a, b -> a + b }'
+      ],
+      1,
+      "Option B is correct. The recursive call sum(list.drop(1), acc + list.first()) is the very last thing — no addition happens after it. The accumulator carries the running total forward. Option A fails because list.first() + sum(...) means addition happens AFTER the recursive call returns — not tail position."
+    )}
+
+    <button class="next-btn" onclick="nextSection()">Next: Common Patterns →</button>
+  `;
+}
+
+// ════════════════════════════════════════
+// SECTION 6: Common Patterns
+// ════════════════════════════════════════
+function renderPatterns() {
+  return `
+    <h2>Recursive Patterns You'll Use Forever</h2>
+    <p>Once you see these patterns, you'll recognize them everywhere. Each one follows the same template: base case + recursive case + combine.</p>
+
+    <h3>Pattern 1: Process a List</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin</span>
+<span class="cm">// Filter a list recursively</span>
+<span class="kw">fun</span> &lt;<span class="tp">T</span>&gt; <span class="fn">filter</span>(<span class="tp">list</span>: <span class="tp">List</span>&lt;<span class="tp">T</span>&gt;, <span class="tp">predicate</span>: (<span class="tp">T</span>) -> <span class="tp">Boolean</span>): <span class="tp">List</span>&lt;<span class="tp">T</span>&gt; {
+    <span class="kw">if</span> (list.<span class="fn">isEmpty</span>()) <span class="kw">return</span> <span class="fn">emptyList</span>()
+
+    <span class="kw">val</span> rest = <span class="fn">filter</span>(list.<span class="fn">drop</span>(<span class="num">1</span>), predicate)
+    <span class="kw">return if</span> (<span class="fn">predicate</span>(list.<span class="fn">first</span>())) <span class="fn">listOf</span>(list.<span class="fn">first</span>()) + rest
+           <span class="kw">else</span> rest
+}
+
+<span class="fn">filter</span>(<span class="fn">listOf</span>(<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>,<span class="num">4</span>,<span class="num">5</span>)) { it % <span class="num">2</span> == <span class="num">0</span> } <span class="cm">// [2, 4]</span>
+    </div>
+
+    <h3>Pattern 2: Traverse a Tree</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin</span>
+<span class="kw">data class</span> <span class="tp">TreeNode</span>(<span class="kw">val</span> <span class="tp">value</span>: <span class="tp">Int</span>, <span class="kw">val</span> <span class="tp">left</span>: <span class="tp">TreeNode</span>? = <span class="kw">null</span>, <span class="kw">val</span> <span class="tp">right</span>: <span class="tp">TreeNode</span>? = <span class="kw">null</span>)
+
+<span class="kw">fun</span> <span class="fn">treeSum</span>(<span class="tp">node</span>: <span class="tp">TreeNode</span>?): <span class="tp">Int</span> {
+    <span class="kw">if</span> (node == <span class="kw">null</span>) <span class="kw">return</span> <span class="num">0</span>         <span class="cm">// base case: empty tree</span>
+
+    <span class="kw">return</span> node.value +
+           <span class="fn">treeSum</span>(node.left) +       <span class="cm">// recurse left subtree</span>
+           <span class="fn">treeSum</span>(node.right)         <span class="cm">// recurse right subtree</span>
+}
+    </div>
+
+    <div class="analogy">
+      <div class="title">Trees Are Where Recursion Shines</div>
+      <p>Iterating over a tree with loops is painful — you need explicit stacks or queues. But recursively? "The sum of a tree is the root's value plus the sum of the left subtree plus the sum of the right subtree." Natural and clean.</p>
+    </div>
+
+    <h3>Pattern 3: Divide and Conquer</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — Merge Sort</span>
+<span class="kw">fun</span> <span class="fn">mergeSort</span>(<span class="tp">list</span>: <span class="tp">List</span>&lt;<span class="tp">Int</span>&gt;): <span class="tp">List</span>&lt;<span class="tp">Int</span>&gt; {
+    <span class="kw">if</span> (list.size <= <span class="num">1</span>) <span class="kw">return</span> list   <span class="cm">// base case</span>
+
+    <span class="kw">val</span> mid = list.size / <span class="num">2</span>
+    <span class="kw">val</span> left = <span class="fn">mergeSort</span>(list.<span class="fn">take</span>(mid))     <span class="cm">// sort left half</span>
+    <span class="kw">val</span> right = <span class="fn">mergeSort</span>(list.<span class="fn">drop</span>(mid))    <span class="cm">// sort right half</span>
+
+    <span class="kw">return</span> <span class="fn">merge</span>(left, right)               <span class="cm">// combine sorted halves</span>
+}
+    </div>
+
+    <h3>Pattern 4: Build All Possibilities (Backtracking)</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — Generate all permutations</span>
+<span class="kw">fun</span> <span class="fn">permutations</span>(<span class="tp">str</span>: <span class="tp">String</span>): <span class="tp">List</span>&lt;<span class="tp">String</span>&gt; {
+    <span class="kw">if</span> (str.length <= <span class="num">1</span>) <span class="kw">return</span> <span class="fn">listOf</span>(str)  <span class="cm">// base case</span>
+
+    <span class="kw">return</span> str.<span class="fn">flatMapIndexed</span> { i, c ->
+        <span class="fn">permutations</span>(str.<span class="fn">removeRange</span>(i, i + <span class="num">1</span>))  <span class="cm">// permute the rest</span>
+            .<span class="fn">map</span> { c + it }                         <span class="cm">// prepend current char</span>
+    }
+}
+
+<span class="fn">permutations</span>(<span class="str">"abc"</span>)
+<span class="cm">// [abc, acb, bac, bca, cab, cba]</span>
+    </div>
+
+    <div class="mental-model">
+      <div class="title">The 4 Patterns Summarized</div>
+      <p><strong>Linear:</strong> Process one element, recurse on the rest. (Lists, strings)</p>
+      <p><strong>Tree:</strong> Recurse on left and right children. (Binary trees, nested structures)</p>
+      <p><strong>Divide & Conquer:</strong> Split in half, recurse both halves, merge. (Sorting, searching)</p>
+      <p><strong>Backtracking:</strong> Try each option, recurse with that choice, collect all results. (Permutations, combinations, puzzles)</p>
+    </div>
+
+    ${renderQuiz('q6',
+      'You need to count all files in a nested folder structure (folders contain files and other folders). Which pattern fits?',
+      [
+        'Linear — process one item, recurse on rest',
+        'Tree — recurse on each subfolder',
+        'Divide & Conquer — split folders in half',
+        'Backtracking — try each folder'
+      ],
+      1,
+      "A folder structure is a tree! Each folder is a node with children (files and subfolders). You\'d count the files in the current folder, then recursively count files in each subfolder and add them up. Tree recursion is the natural fit for any hierarchical/nested data."
+    )}
+
+    <button class="next-btn" onclick="nextSection()">Next: Final Challenge →</button>
+  `;
+}
+
+// ════════════════════════════════════════
+// SECTION 7: Final Quiz
+// ════════════════════════════════════════
+function renderFinalQuiz() {
+  const totalQs = ['fq1','fq2','fq3','fq4','fq5'].length;
+  const answered = ['fq1','fq2','fq3','fq4','fq5'].filter(q => quizAnswers[q] !== undefined).length;
+  const correct = ['fq1','fq2','fq3','fq4','fq5'].filter(q => quizAnswers[q] === true).length;
+
+  return `
+    <h2>Final Challenge</h2>
+    <p>Five questions. No looking back. Let's see if recursion is truly ingrained.</p>
+    ${answered === totalQs ? `<div class="score-card">Score: ${correct}/${totalQs} ${correct === totalQs ? '— Perfect!' : correct >= 3 ? '— Solid understanding!' : '— Review the earlier sections and try again'}</div>` : ''}
+
+    ${renderQuiz('fq1',
+      'What does this Kotlin function compute?\n\nfun mystery(n: Int): Int = if (n <= 1) n else mystery(n - 1) + mystery(n - 2)',
+      [
+        'Factorial of n',
+        'Fibonacci number at position n',
+        'Sum of 1 to n',
+        'Power of 2'
+      ],
+      1,
+      "Two base cases (n=0 returns 0, n=1 returns 1) and the sum of the two previous values — that's the Fibonacci sequence definition. Recognizing recursive definitions by their structure is a key skill."
+    )}
+
+    ${renderQuiz('fq2',
+      'This function should reverse a string but has a bug. What\'s wrong?\n\nfun reverse(s: String): String {\n    if (s.isEmpty()) return s\n    return reverse(s.drop(1)) + s.first()\n}',
+      [
+        'The base case is wrong',
+        'drop(1) should be drop(0)',
+        's.first() should be s.last()',
+        'Nothing — this function is correct'
+      ],
+      3,
+      "This is actually correct! reverse(\"hello\") = reverse(\"ello\") + 'h' = reverse(\"llo\") + 'e' + 'h' = ... = \"olleh\". The base case handles empty strings, s.drop(1) shrinks the input, and s.first() appends the removed character at the end. A trick question to test if you can trace through code confidently."
+    )}
+
+    ${renderQuiz('fq3',
+      'What is the maximum depth of the call stack when calling mergeSort on a list of 16 elements?',
+      [
+        '4 (log₂ 16)',
+        '5 (log₂ 16 + 1)',
+        '16',
+        '32'
+      ],
+      1,
+      "Merge sort divides in half each time: 16 → 8 → 4 → 2 → 1. That's 4 levels of splitting (log₂ 16 = 4), plus the base case level = 5 frames max on the stack at once. It's O(log n) depth, which is why merge sort doesn't overflow even for very large lists."
+    )}
+
+    ${renderQuiz('fq4',
+      'You want to convert this to tail recursion. What\'s the accumulator for "count elements matching a predicate"?\n\nfun count(list: List<Int>, pred: (Int) -> Boolean): Int',
+      [
+        'The filtered list so far',
+        'An Int that tracks the running count',
+        'The remaining list',
+        'A Boolean flag'
+      ],
+      1,
+      "The accumulator holds what you'd normally compute on the way back up. Since count returns an Int (the count so far), the accumulator is an Int. tailrec fun count(list: List<Int>, pred: (Int) -> Boolean, acc: Int = 0): Int = if (list.isEmpty()) acc else count(list.drop(1), pred, if (pred(list.first())) acc + 1 else acc)"
+    )}
+
+    ${renderQuiz('fq5',
+      'You need to write a recursive function that finds the maximum value in a binary tree. Using the leap of faith, how would you think about it?',
+      [
+        'Compare all nodes at once',
+        'Assume max(left) and max(right) work correctly, return the largest of root, max(left), max(right)',
+        'Always go right since BSTs store larger values there',
+        'Use a global variable to track the max'
+      ],
+      1,
+      "Leap of faith: trust that max(node.left) returns the max of the left subtree and max(node.right) returns the max of the right subtree. Then you just compare those two results with the current node's value and return the largest. You don't need to think about HOW they find the max — you just trust they do, handle the current step, and the base case (null node) returns Int.MIN_VALUE."
+    )}
+
+    ${answered === totalQs ? `
+    <div class="mental-model" style="margin-top: 30px;">
+      <div class="title">Your Recursion Checklist — Pin This</div>
+      <p><strong>Writing a recursive function:</strong></p>
+      <p>1. What's the simplest case where I already know the answer? → <em>Base case</em></p>
+      <p>2. If I magically had the answer for a smaller input, how would I use it? → <em>Recursive case</em></p>
+      <p>3. Does my input actually get smaller each time? → <em>Ensures termination</em></p>
+      <p>4. Is performance a concern? → Consider <em>memoization</em> or <em>tailrec</em></p>
+      <p style="margin-top: 12px; color: var(--accent);">You've got this, Sidhant. Recursion is now part of your thinking toolkit.</p>
+    </div>
+    ` : ''}
+  `;
+}
+
+// ════════════════════════════════════════
+// Quiz Component
+// ════════════════════════════════════════
+function renderQuiz(id, question, options, correctIdx, explanation) {
+  const answered = quizAnswers[id] !== undefined;
+  const selectedIdx = quizAnswers[id + '_sel'];
+
+  return `
+    <div class="quiz-card">
+      <h4>Quiz</h4>
+      <div class="question" style="white-space: pre-wrap; font-family: ${question.includes('fun ') ? 'monospace' : 'inherit'}; font-size: ${question.includes('fun ') ? '0.88em' : '1.05em'};">${question}</div>
+      <div class="quiz-options">
+        ${options.map((opt, i) => {
+          let cls = '';
+          if (answered) {
+            if (i === correctIdx) cls = 'correct';
+            else if (i === selectedIdx && i !== correctIdx) cls = 'wrong';
+          }
+          return `<button class="quiz-option ${cls}" ${answered ? 'disabled' : ''} onclick="answerQuiz('${id}', ${i}, ${correctIdx})">${opt}</button>`;
+        }).join('')}
+      </div>
+      ${answered ? `<div class="quiz-explanation ${quizAnswers[id] ? 'correct' : 'wrong'}">${quizAnswers[id] ? '✓ Correct!' : '✗ Not quite.'} ${explanation}</div>` : ''}
+    </div>
+  `;
+}
+
+function answerQuiz(id, selected, correct) {
+  quizAnswers[id] = selected === correct;
+  quizAnswers[id + '_sel'] = selected;
+  render();
+}
+
+// ════════════════════════════════════════
+// Viz Controls
+// ════════════════════════════════════════
+function vizStep(section, dir) {
+  if (!vizStates[section]) vizStates[section] = { step: -1 };
+  vizStates[section].step = Math.max(-1, Math.min(6, vizStates[section].step + dir));
+  render();
+}
+
+function vizReset(section) {
+  vizStates[section] = { step: -1 };
+  render();
+}
+
+function initViz(section) {
+  // placeholder for future enhancements
+}
+
+// Initial render
+render();
+</script>
+</body>
+</html>
