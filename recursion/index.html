@@ -114,6 +114,7 @@
     font-size: 0.9em;
     line-height: 1.6;
     position: relative;
+    white-space: pre;
   }
 
   .code-block .lang-tag {
@@ -450,6 +451,8 @@
     padding: 14px 16px;
     margin: 12px 0;
     line-height: 1.8;
+    white-space: pre-wrap;
+    overflow-x: auto;
   }
 
   .step-trace .call { color: #61afef; }
@@ -504,6 +507,9 @@ function render() {
       ${renderSection(currentSection)}
     </div>
   `;
+  // Fix code block indentation (strips template literal whitespace)
+  fixCodeBlocks();
+
   // Re-run any viz animations
   if (currentSection === 2 || currentSection === 3 || currentSection === 4) {
     initViz(currentSection);
@@ -1207,7 +1213,7 @@ function renderFinalQuiz() {
       <p>2. If I magically had the answer for a smaller input, how would I use it? → <em>Recursive case</em></p>
       <p>3. Does my input actually get smaller each time? → <em>Ensures termination</em></p>
       <p>4. Is performance a concern? → Consider <em>memoization</em> or <em>tailrec</em></p>
-      <p style="margin-top: 12px; color: var(--accent);">You've got this, Sidhant. Recursion is now part of your thinking toolkit.</p>
+      <p style="margin-top: 12px; color: var(--accent);">You've got this. Recursion is now part of your thinking toolkit.</p>
     </div>
     ` : ''}
   `;
@@ -1261,6 +1267,48 @@ function vizReset(section) {
 
 function initViz(section) {
   // placeholder for future enhancements
+}
+
+// ── Fix code block indentation ──
+// Template literals add unwanted leading whitespace from JS source indentation.
+// This strips the common indent and trims blank lines so code renders cleanly.
+function fixCodeBlocks() {
+  document.querySelectorAll('.code-block, .step-trace').forEach(block => {
+    // Work with the raw innerHTML
+    const html = block.innerHTML;
+    const lines = html.split('\n');
+
+    // Trim empty lines at start and end
+    while (lines.length && lines[0].trim() === '') lines.shift();
+    while (lines.length && lines[lines.length - 1].trim() === '') lines.pop();
+
+    // Skip lines that are just the lang-tag (position:absolute, not visible inline)
+    const contentLines = lines.filter(l => l.trim() !== '' && !l.trim().match(/^<span class="lang-tag">.*<\/span>$/));
+
+    // Find minimum indent (number of leading spaces) across non-empty content lines
+    const indents = contentLines.map(l => {
+      const match = l.match(/^( *)/);
+      return match ? match[1].length : 0;
+    });
+    const minIndent = Math.min(...indents);
+
+    // Strip that common indent from all lines
+    if (minIndent > 0) {
+      const fixed = lines.map(l => {
+        // Only strip up to minIndent spaces from the start
+        let stripped = 0;
+        let i = 0;
+        while (i < l.length && l[i] === ' ' && stripped < minIndent) {
+          i++;
+          stripped++;
+        }
+        return l.slice(i);
+      });
+      block.innerHTML = fixed.join('\n');
+    } else {
+      block.innerHTML = lines.join('\n');
+    }
+  });
 }
 
 // Initial render
