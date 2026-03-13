@@ -335,6 +335,12 @@
         <span class="badge badge-live">Live</span>
       </a>
 
+      <a class="nav-item" data-topic="graph-traversal" onclick="loadTopic('graph-traversal', this)">
+        <span class="icon">&#x1f4a1;</span>
+        <span class="label">DFS vs BFS</span>
+        <span class="badge badge-new">New</span>
+      </a>
+
       <a class="nav-item disabled" data-topic="null-safety">
         <span class="icon">&#x1f6e1;</span>
         <span class="label">Null Safety</span>
@@ -416,6 +422,11 @@
           <div class="card-title">Recursion</div>
           <div class="card-desc">Call stacks, tail recursion, tree recursion — with interactive visualizations and 12 quizzes.</div>
         </div>
+        <div class="topic-card" onclick="loadTopic('graph-traversal')">
+          <div class="card-icon">&#x1f4a1;</div>
+          <div class="card-title">DFS vs BFS</div>
+          <div class="card-desc">Tree traversals visualized as LED bulbs lighting up — with stack & queue animations.</div>
+        </div>
         <div class="topic-card disabled">
           <div class="card-icon">&#x1f6e1;</div>
           <div class="card-title">Null Safety</div>
@@ -443,6 +454,7 @@
   // ── Topic Loading ──
   const topicMap = {
     'recursion': 'recursion/index.html',
+    'graph-traversal': 'graph-traversal/index.html',
   };
 
   let activeTopic = null;

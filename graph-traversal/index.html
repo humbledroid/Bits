@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graph Traversal — DFS vs BFS Visualized</title>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --surface2: #0f3460;
+  --accent: #e94560;
+  --accent2: #7c3aed;
+  --green: #10b981;
+  --yellow: #f59e0b;
+  --cyan: #06b6d4;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --code-bg: #0d1117;
+  --border: #334155;
+  --led-off: #2a2a3e;
+  --led-dfs: #e94560;
+  --led-bfs: #06b6d4;
+  --led-glow-dfs: rgba(233, 69, 96, 0.6);
+  --led-glow-bfs: rgba(6, 182, 212, 0.6);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+.app {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+header {
+  text-align: center;
+  padding: 40px 0 30px;
+  border-bottom: 2px solid var(--surface2);
+  margin-bottom: 30px;
+}
+
+header h1 {
+  font-size: 2.4em;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+
+header p { color: var(--text-dim); font-size: 1.1em; }
+
+/* Navigation */
+.nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+  background: var(--surface);
+  padding: 8px;
+  border-radius: 12px;
+}
+
+.nav button {
+  flex: 1;
+  min-width: 100px;
+  padding: 10px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.nav button:hover { background: var(--surface2); color: var(--text); }
+.nav button.active { background: var(--accent); color: white; }
+
+/* Progress */
+.progress-bar {
+  height: 4px;
+  background: var(--surface);
+  border-radius: 2px;
+  margin-bottom: 30px;
+  overflow: hidden;
+}
+
+.progress-bar .fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--cyan));
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* Sections */
+.section {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section h2 {
+  font-size: 1.8em;
+  margin-bottom: 6px;
+  color: var(--accent);
+}
+
+.section h3 {
+  font-size: 1.3em;
+  margin: 24px 0 10px;
+  color: var(--accent2);
+}
+
+.section p { margin-bottom: 14px; }
+
+.highlight { color: var(--yellow); font-weight: 600; }
+.accent { color: var(--accent); font-weight: 600; }
+.cyan { color: var(--cyan); font-weight: 600; }
+
+/* Code blocks */
+.code-block {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin: 16px 0;
+  overflow-x: auto;
+  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+  font-size: 0.9em;
+  line-height: 1.6;
+  position: relative;
+  white-space: pre;
+}
+
+.code-block .lang-tag {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 0.7em;
+  color: var(--text-dim);
+  background: var(--surface2);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.kw { color: #c678dd; }
+.fn { color: #61afef; }
+.str { color: #98c379; }
+.num { color: #d19a66; }
+.cm { color: #5c6370; font-style: italic; }
+.tp { color: #e5c07b; }
+
+/* ═══════════════════════════════════ */
+/* LED Tree Visualization             */
+/* ═══════════════════════════════════ */
+.viz-panel {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.viz-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(15, 52, 96, 0.3) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.viz-svg-container, .viz-status, .viz-ds {
+  /* Prevents layout shift during targeted updates */
+}
+
+.tree-svg {
+  width: 100%;
+  height: 380px;
+  display: block;
+}
+
+/* LED node styles */
+.led-node {
+  cursor: default;
+  transition: all 0.3s ease;
+}
+
+.led-base {
+  fill: var(--led-off);
+  stroke: #3a3a55;
+  stroke-width: 2;
+  transition: all 0.4s ease;
+}
+
+.led-shine {
+  fill: rgba(255,255,255,0.03);
+  transition: all 0.4s ease;
+}
+
+.led-label {
+  fill: var(--text-dim);
+  font-family: 'Fira Code', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  transition: fill 0.4s ease;
+}
+
+.led-order {
+  fill: none;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+  transition: fill 0.5s ease;
+}
+
+.tree-edge {
+  stroke: #2a2a45;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: stroke 0.4s ease;
+}
+
+/* LED lit states */
+.led-node.lit-dfs .led-base {
+  fill: var(--led-dfs);
+  stroke: #ff6b81;
+  filter: drop-shadow(0 0 12px var(--led-glow-dfs)) drop-shadow(0 0 24px var(--led-glow-dfs));
+}
+
+.led-node.lit-dfs .led-shine {
+  fill: rgba(255,255,255,0.25);
+}
+
+.led-node.lit-dfs .led-label {
+  fill: #fff;
+}
+
+.led-node.lit-dfs .led-order {
+  fill: var(--yellow);
+}
+
+.led-node.lit-bfs .led-base {
+  fill: var(--led-bfs);
+  stroke: #22d3ee;
+  filter: drop-shadow(0 0 12px var(--led-glow-bfs)) drop-shadow(0 0 24px var(--led-glow-bfs));
+}
+
+.led-node.lit-bfs .led-shine {
+  fill: rgba(255,255,255,0.25);
+}
+
+.led-node.lit-bfs .led-label {
+  fill: #fff;
+}
+
+.led-node.lit-bfs .led-order {
+  fill: var(--yellow);
+}
+
+.led-node.current .led-base {
+  stroke-width: 3;
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { filter: drop-shadow(0 0 12px var(--led-glow-dfs)) drop-shadow(0 0 24px var(--led-glow-dfs)); }
+  50% { filter: drop-shadow(0 0 20px var(--led-glow-dfs)) drop-shadow(0 0 40px var(--led-glow-dfs)); }
+}
+
+.led-node.current.lit-bfs .led-base {
+  animation-name: pulse-bfs;
+}
+
+@keyframes pulse-bfs {
+  0%, 100% { filter: drop-shadow(0 0 12px var(--led-glow-bfs)) drop-shadow(0 0 24px var(--led-glow-bfs)); }
+  50% { filter: drop-shadow(0 0 20px var(--led-glow-bfs)) drop-shadow(0 0 40px var(--led-glow-bfs)); }
+}
+
+.tree-edge.lit-dfs { stroke: var(--led-dfs); stroke-width: 3; filter: drop-shadow(0 0 6px var(--led-glow-dfs)); }
+.tree-edge.lit-bfs { stroke: var(--led-bfs); stroke-width: 3; filter: drop-shadow(0 0 6px var(--led-glow-bfs)); }
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.controls button {
+  padding: 8px 20px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.88em;
+  transition: all 0.2s;
+}
+
+.controls button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.controls button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.controls button.dfs {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.controls button.dfs:hover:not(:disabled) {
+  background: var(--accent);
+  color: white;
+}
+
+.controls button.bfs {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.controls button.bfs:hover:not(:disabled) {
+  background: var(--cyan);
+  color: white;
+}
+
+.controls button.neutral {
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+}
+.controls button.neutral:hover:not(:disabled) {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  color: var(--text-dim);
+  font-size: 0.82em;
+}
+
+.speed-control input[type="range"] {
+  width: 80px;
+  accent-color: var(--accent2);
+}
+
+/* Data structure display */
+.ds-display {
+  margin-top: 14px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.85em;
+  min-height: 44px;
+  transition: all 0.3s;
+}
+
+.ds-label {
+  font-size: 0.72em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.ds-label.dfs-label { color: var(--accent); }
+.ds-label.bfs-label { color: var(--cyan); }
+
+.ds-content {
+  color: var(--text);
+  word-break: break-all;
+}
+
+.ds-content .current-item {
+  color: var(--yellow);
+  font-weight: 700;
+}
+
+.ds-content .visited-item {
+  color: var(--text-dim);
+}
+
+/* Status message */
+.status-msg {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.9em;
+  line-height: 1.5;
+  animation: fadeIn 0.3s ease;
+}
+
+.status-msg.dfs-msg {
+  background: rgba(233, 69, 96, 0.08);
+  border: 1px solid rgba(233, 69, 96, 0.2);
+  color: #fca5a5;
+}
+
+.status-msg.bfs-msg {
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  color: #67e8f9;
+}
+
+/* Side-by-side mode */
+.side-by-side {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.side-by-side .viz-panel {
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .side-by-side { grid-template-columns: 1fr; }
+}
+
+/* Analogy / mental model boxes */
+.analogy {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(233, 69, 96, 0.1));
+  border: 1px solid var(--accent2);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin: 18px 0;
+}
+
+.analogy .title {
+  font-weight: 700;
+  color: var(--accent2);
+  margin-bottom: 6px;
+}
+
+.mental-model {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin: 18px 0;
+}
+
+.mental-model .title {
+  font-weight: 700;
+  color: var(--yellow);
+  margin-bottom: 6px;
+}
+
+/* Quiz */
+.quiz-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0;
+}
+
+.quiz-card h4 {
+  color: var(--yellow);
+  margin-bottom: 4px;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.quiz-card .question {
+  font-size: 1.05em;
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quiz-option {
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.95em;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.quiz-option:hover:not(:disabled) {
+  border-color: var(--accent2);
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.quiz-option.correct {
+  border-color: var(--green);
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--green);
+}
+
+.quiz-option.wrong {
+  border-color: var(--accent);
+  background: rgba(233, 69, 96, 0.15);
+  color: var(--accent);
+}
+
+.quiz-explanation {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 0.9em;
+  line-height: 1.6;
+  animation: fadeIn 0.3s ease;
+}
+
+.quiz-explanation.correct {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--green);
+}
+
+.quiz-explanation.wrong {
+  background: rgba(233, 69, 96, 0.1);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  color: #fca5a5;
+}
+
+/* Next button */
+.next-btn {
+  display: block;
+  margin: 30px auto 0;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, var(--accent), var(--cyan));
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 1em;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.next-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(233, 69, 96, 0.3);
+}
+
+.step-trace {
+  font-family: monospace;
+  font-size: 0.88em;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 12px 0;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* Comparison table */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 0.9em;
+}
+
+.comparison-table th {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.comparison-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.comparison-table .col-dfs { color: var(--accent); }
+.comparison-table .col-bfs { color: var(--cyan); }
+
+@media (max-width: 600px) {
+  .app { padding: 12px; }
+  header h1 { font-size: 1.6em; }
+  .nav button { font-size: 0.75em; padding: 8px 4px; min-width: 60px; }
+  .tree-svg { height: 300px; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="root"></div>
+
+<script>
+// ── State ──
+let currentSection = 0;
+let quizAnswers = {};
+
+const sections = [
+  "The Idea",
+  "DFS Deep Dive",
+  "BFS Deep Dive",
+  "Side by Side",
+  "Kotlin Code",
+  "Quiz"
+];
+
+// ── Binary Tree Definition ──
+// A fixed binary tree for all visualizations
+//          1
+//        /   \
+//       2     3
+//      / \   / \
+//     4   5 6   7
+const TREE = {
+  nodes: [
+    { id: 1, label: '1' },
+    { id: 2, label: '2' },
+    { id: 3, label: '3' },
+    { id: 4, label: '4' },
+    { id: 5, label: '5' },
+    { id: 6, label: '6' },
+    { id: 7, label: '7' },
+  ],
+  edges: [
+    { from: 1, to: 2 },
+    { from: 1, to: 3 },
+    { from: 2, to: 4 },
+    { from: 2, to: 5 },
+    { from: 3, to: 6 },
+    { from: 3, to: 7 },
+  ]
+};
+
+// Node positions for layout (x, y as percentages)
+function getNodePositions(w, h) {
+  const cx = w / 2;
+  const yGap = h / 4.2;
+  const topY = 50;
+  return {
+    1: { x: cx, y: topY },
+    2: { x: cx - w * 0.22, y: topY + yGap },
+    3: { x: cx + w * 0.22, y: topY + yGap },
+    4: { x: cx - w * 0.35, y: topY + yGap * 2 },
+    5: { x: cx - w * 0.09, y: topY + yGap * 2 },
+    6: { x: cx + w * 0.09, y: topY + yGap * 2 },
+    7: { x: cx + w * 0.35, y: topY + yGap * 2 },
+  };
+}
+
+// DFS order (pre-order: root, left, right)
+const DFS_ORDER = [1, 2, 4, 5, 3, 6, 7];
+// BFS order (level order)
+const BFS_ORDER = [1, 2, 3, 4, 5, 6, 7];
+
+// DFS step descriptions
+const DFS_STEPS = [
+  "Visit <b>node 1</b> (root). Push right child 3, then left child 2 onto the stack.",
+  "Pop <b>node 2</b>. Push its right child 5, then left child 4.",
+  "Pop <b>node 4</b>. It's a leaf — no children to push.",
+  "Pop <b>node 5</b>. It's a leaf — no children to push.",
+  "Pop <b>node 3</b>. Push right child 7, then left child 6.",
+  "Pop <b>node 6</b>. It's a leaf — no children to push.",
+  "Pop <b>node 7</b>. It's a leaf. Stack is empty — DFS complete!",
+];
+
+// BFS step descriptions
+const BFS_STEPS = [
+  "Visit <b>node 1</b> (root). Enqueue children: 2 and 3.",
+  "Dequeue <b>node 2</b>. Enqueue its children: 4 and 5.",
+  "Dequeue <b>node 3</b>. Enqueue its children: 6 and 7.",
+  "Dequeue <b>node 4</b>. Leaf — nothing to enqueue.",
+  "Dequeue <b>node 5</b>. Leaf — nothing to enqueue.",
+  "Dequeue <b>node 6</b>. Leaf — nothing to enqueue.",
+  "Dequeue <b>node 7</b>. Leaf. Queue is empty — BFS complete!",
+];
+
+// DFS stack snapshots (after each visit)
+const DFS_STACKS = [
+  [3, 2],     // after visiting 1
+  [3, 5, 4],  // after visiting 2
+  [3, 5],     // after visiting 4
+  [3],        // after visiting 5
+  [7, 6],     // after visiting 3
+  [7],        // after visiting 6
+  [],         // after visiting 7
+];
+
+// BFS queue snapshots (after each visit)
+const BFS_QUEUES = [
+  [2, 3],        // after visiting 1
+  [3, 4, 5],     // after visiting 2
+  [4, 5, 6, 7],  // after visiting 3
+  [5, 6, 7],     // after visiting 4
+  [6, 7],        // after visiting 5
+  [7],           // after visiting 6
+  [],            // after visiting 7
+];
+
+// ── Animation State ──
+let animState = {
+  dfs: { step: -1, playing: false, timer: null },
+  bfs: { step: -1, playing: false, timer: null },
+  sideDfs: { step: -1, playing: false, timer: null },
+  sideBfs: { step: -1, playing: false, timer: null },
+};
+let animSpeed = 800;
+
+// ── Edge map for lighting ──
+function getEdgesForNode(nodeId) {
+  return TREE.edges.filter(e => e.to === nodeId);
+}
+
+// ── Render ──
+function render() {
+  const app = document.getElementById('root');
+  app.innerHTML = `
+    <header>
+      <h1>DFS vs BFS</h1>
+      <p>Watch binary tree traversal as LED bulbs lighting up</p>
+    </header>
+    <div class="progress-bar"><div class="fill" style="width: ${((currentSection + 1) / sections.length) * 100}%"></div></div>
+    <nav class="nav">
+      ${sections.map((s, i) => `
+        <button class="${i === currentSection ? 'active' : ''}" onclick="goTo(${i})">${s}</button>
+      `).join('')}
+    </nav>
+    <div class="section">
+      ${renderSection(currentSection)}
+    </div>
+  `;
+  fixCodeBlocks();
+}
+
+function goTo(i) {
+  stopAll();
+  currentSection = i;
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextSection() {
+  if (currentSection < sections.length - 1) {
+    stopAll();
+    currentSection++;
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function renderSection(i) {
+  switch (i) {
+    case 0: return renderIdea();
+    case 1: return renderDFS();
+    case 2: return renderBFS();
+    case 3: return renderSideBySide();
+    case 4: return renderCode();
+    case 5: return renderQuizSection();
+  }
+}
+
+// ═══════════════════════════
+// SVG Tree Builder
+// ═══════════════════════════
+function buildTreeSVG(id, mode, stateKey, w = 460, h = 340) {
+  const pos = getNodePositions(w, h);
+  const state = animState[stateKey] || { step: -1 };
+  const order = mode === 'dfs' ? DFS_ORDER : BFS_ORDER;
+  const litSet = new Set();
+  let currentNode = null;
+
+  if (state.step >= 0) {
+    for (let i = 0; i <= Math.min(state.step, order.length - 1); i++) {
+      litSet.add(order[i]);
+    }
+    currentNode = order[Math.min(state.step, order.length - 1)];
+  }
+
+  // Build lit edges
+  const litEdges = new Set();
+  litSet.forEach(nid => {
+    getEdgesForNode(nid).forEach(e => {
+      if (litSet.has(e.from)) {
+        litEdges.add(e.from + '-' + e.to);
+      }
+    });
+  });
+
+  let svg = `<svg class="tree-svg" viewBox="0 0 ${w} ${h}" id="${id}">`;
+  // Edges
+  TREE.edges.forEach(e => {
+    const p1 = pos[e.from];
+    const p2 = pos[e.to];
+    const key = e.from + '-' + e.to;
+    const litClass = litEdges.has(key) ? ` lit-${mode}` : '';
+    svg += `<line class="tree-edge${litClass}" x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}"/>`;
+  });
+
+  // Nodes
+  TREE.nodes.forEach(n => {
+    const p = pos[n.id];
+    const isLit = litSet.has(n.id);
+    const isCurrent = n.id === currentNode;
+    let cls = 'led-node';
+    if (isLit) cls += ` lit-${mode}`;
+    if (isCurrent) cls += ' current';
+
+    // Traversal order number
+    let orderNum = '';
+    if (isLit) {
+      const idx = order.indexOf(n.id);
+      orderNum = idx + 1;
+    }
+
+    svg += `<g class="${cls}" transform="translate(${p.x},${p.y})">`;
+    svg += `<circle class="led-base" r="24"/>`;
+    svg += `<circle class="led-shine" r="18" cy="-4"/>`;
+    svg += `<text class="led-label" dy="1">${n.label}</text>`;
+    svg += `<text class="led-order" dy="38">${orderNum || ''}</text>`;
+    svg += `</g>`;
+  });
+
+  svg += `</svg>`;
+  return svg;
+}
+
+// ═══════════════════════════
+// Targeted viz-only DOM update (no full re-render)
+// ═══════════════════════════
+function updateVizOnly(stateKey, mode) {
+  // Find all viz-panels matching this stateKey
+  const panels = document.querySelectorAll(`.viz-panel[data-viz="${stateKey}"]`);
+  if (panels.length === 0) {
+    // Fallback: if panels not found (e.g. section changed), do full render
+    render();
+    return;
+  }
+  panels.forEach(panel => {
+    const w = stateKey.startsWith('side') ? 400 : 460;
+    const h = stateKey.startsWith('side') ? 300 : 340;
+    const svgId = panel.querySelector('.tree-svg')?.id || (stateKey + '-tree');
+
+    // Update SVG
+    const svgContainer = panel.querySelector('.viz-svg-container');
+    if (svgContainer) svgContainer.innerHTML = buildTreeSVG(svgId, mode, stateKey, w, h);
+
+    // Update status message
+    const statusEl = panel.querySelector('.viz-status');
+    if (statusEl) statusEl.innerHTML = renderStepMsg(stateKey, mode);
+
+    // Update data structure display
+    const dsEl = panel.querySelector('.viz-ds');
+    if (dsEl) dsEl.innerHTML = renderDSDisplay(stateKey, mode);
+
+    // Update button disabled states
+    const s = animState[stateKey];
+    const maxStep = (mode === 'dfs' ? DFS_ORDER : BFS_ORDER).length - 1;
+    const fwdBtn = panel.querySelector('.viz-step-fwd');
+    if (fwdBtn) fwdBtn.disabled = s.step >= maxStep;
+    const backBtn = panel.querySelector('.viz-step-back');
+    if (backBtn) backBtn.disabled = s.step <= -1;
+  });
+}
+
+// ═══════════════════════════
+// Control Helpers
+// ═══════════════════════════
+function stepAnim(stateKey, mode, dir) {
+  const s = animState[stateKey];
+  const maxStep = (mode === 'dfs' ? DFS_ORDER : BFS_ORDER).length - 1;
+  s.step = Math.max(-1, Math.min(maxStep, s.step + dir));
+  updateVizOnly(stateKey, mode);
+}
+
+function playAnim(stateKey, mode) {
+  const s = animState[stateKey];
+  if (s.playing) return;
+  s.playing = true;
+  const maxStep = (mode === 'dfs' ? DFS_ORDER : BFS_ORDER).length - 1;
+  function tick() {
+    if (s.step >= maxStep) {
+      s.playing = false;
+      updateVizOnly(stateKey, mode);
+      return;
+    }
+    s.step++;
+    updateVizOnly(stateKey, mode);
+    s.timer = setTimeout(tick, animSpeed);
+  }
+  tick();
+}
+
+function resetAnim(stateKey) {
+  const s = animState[stateKey];
+  if (s.timer) clearTimeout(s.timer);
+  const mode = s.step >= 0 ? 'dfs' : 'dfs'; // need to figure out mode
+  s.step = -1;
+  s.playing = false;
+  // Find the panel to get the mode
+  const panel = document.querySelector(`.viz-panel[data-viz="${stateKey}"]`);
+  const actualMode = panel ? panel.getAttribute('data-mode') : 'dfs';
+  updateVizOnly(stateKey, actualMode);
+}
+
+function stopAll() {
+  Object.values(animState).forEach(s => {
+    if (s.timer) clearTimeout(s.timer);
+    s.playing = false;
+  });
+}
+
+function setSpeed(val) {
+  animSpeed = 1400 - val; // invert: higher slider = faster
+}
+
+// ═══════════════════════════
+// DS Display Helpers
+// ═══════════════════════════
+function renderDSDisplay(stateKey, mode) {
+  const s = animState[stateKey];
+  const order = mode === 'dfs' ? DFS_ORDER : BFS_ORDER;
+  const stacks = mode === 'dfs' ? DFS_STACKS : BFS_QUEUES;
+  const label = mode === 'dfs' ? 'Stack (LIFO)' : 'Queue (FIFO)';
+  const labelClass = mode === 'dfs' ? 'dfs-label' : 'bfs-label';
+
+  if (s.step < 0) {
+    return `<div class="ds-display"><div class="ds-label ${labelClass}">${label}</div><div class="ds-content" style="color: var(--text-dim);">Click play or step to begin</div></div>`;
+  }
+
+  const idx = Math.min(s.step, stacks.length - 1);
+  const snapshot = stacks[idx];
+  const visited = order.slice(0, idx + 1);
+  const dsName = mode === 'dfs' ? 'Stack' : 'Queue';
+
+  return `
+    <div class="ds-display">
+      <div class="ds-label ${labelClass}">${label}</div>
+      <div class="ds-content">
+        ${snapshot.length === 0
+          ? `<span style="color: var(--text-dim);">[empty]</span>`
+          : `[${snapshot.map((n, i) => `<span${i === 0 && mode === 'dfs' ? ' class="current-item"' : (i === 0 && mode === 'bfs' ? ' class="current-item"' : '')}>${n}</span>`).join(', ')}]`
+        }
+      </div>
+    </div>
+    <div class="ds-display" style="margin-top: 8px;">
+      <div class="ds-label" style="color: var(--green);">Visited</div>
+      <div class="ds-content">
+        [${visited.map(n => `<span class="visited-item">${n}</span>`).join(' → ')}]
+      </div>
+    </div>
+  `;
+}
+
+function renderStepMsg(stateKey, mode) {
+  const s = animState[stateKey];
+  const steps = mode === 'dfs' ? DFS_STEPS : BFS_STEPS;
+  const cls = mode === 'dfs' ? 'dfs-msg' : 'bfs-msg';
+  if (s.step < 0) return '';
+  const idx = Math.min(s.step, steps.length - 1);
+  return `<div class="status-msg ${cls}"><strong>Step ${idx + 1}:</strong> ${steps[idx]}</div>`;
+}
+
+// ═══════════════════════════
+// Section 0: The Idea
+// ═══════════════════════════
+function renderIdea() {
+  return `
+    <h2>Two Ways to Explore a Tree</h2>
+    <p>Imagine you're in a building with many rooms connected by hallways. You need to visit every room. There are two fundamentally different strategies:</p>
+
+    <div class="analogy">
+      <div class="title">DFS — The Tunnel Diver</div>
+      <p>Go as <span class="accent">deep</span> as you can down one path before backtracking. Like exploring a cave system: you follow one tunnel all the way to the dead end, then back up and try the next branch.</p>
+      <p>Data structure: <strong>Stack</strong> (Last In, First Out)</p>
+    </div>
+
+    <div class="analogy">
+      <div class="title">BFS — The Ripple Effect</div>
+      <p>Visit all neighbors at the <span class="cyan">current level</span> before going deeper. Like dropping a stone in water — the ripple expands outward ring by ring.</p>
+      <p>Data structure: <strong>Queue</strong> (First In, First Out)</p>
+    </div>
+
+    <p>Both visit every node exactly once. The difference is the <span class="highlight">order</span> — and that order matters a lot depending on what you're searching for.</p>
+
+    <div class="mental-model">
+      <div class="title">The Core Difference</div>
+      <p><strong>DFS</strong> asks: "Can I go deeper?" If yes, go deeper. If no, backtrack.</p>
+      <p><strong>BFS</strong> asks: "Have I seen everyone at this depth?" If no, visit them. If yes, go one level deeper.</p>
+    </div>
+
+    <button class="next-btn" onclick="nextSection()">Next: DFS Deep Dive →</button>
+  `;
+}
+
+// ═══════════════════════════
+// Section 1: DFS
+// ═══════════════════════════
+function renderDFS() {
+  const sk = 'dfs';
+  return `
+    <h2>Depth-First Search <span style="color: var(--accent);">●</span></h2>
+    <p>DFS plunges down each branch to the deepest leaf before backtracking. Watch the LED bulbs light up in DFS order — notice how it goes <span class="accent">deep before wide</span>.</p>
+
+    <div class="viz-panel" data-viz="${sk}" data-mode="dfs">
+      <div class="viz-svg-container">${buildTreeSVG('dfs-tree', 'dfs', sk)}</div>
+      <div class="controls">
+        <button class="dfs" onclick="playAnim('${sk}','dfs')" ${animState[sk].playing ? 'disabled' : ''}>▶ Play</button>
+        <button class="neutral viz-step-fwd" onclick="stepAnim('${sk}','dfs',1)" ${animState[sk].step >= 6 ? 'disabled' : ''}>Step →</button>
+        <button class="neutral viz-step-back" onclick="stepAnim('${sk}','dfs',-1)" ${animState[sk].step <= -1 ? 'disabled' : ''}>← Back</button>
+        <button class="neutral" onclick="resetAnim('${sk}')">Reset</button>
+        <div class="speed-control">
+          <span>Speed</span>
+          <input type="range" min="200" max="1200" value="${1400 - animSpeed}" oninput="setSpeed(parseInt(this.value))">
+        </div>
+      </div>
+      <div class="viz-status">${renderStepMsg(sk, 'dfs')}</div>
+      <div class="viz-ds">${renderDSDisplay(sk, 'dfs')}</div>
+    </div>
+
+    <h3>How the Stack Drives DFS</h3>
+    <p>DFS uses a <span class="accent">stack</span> — last in, first out. When you visit a node, push its children onto the stack (right first, then left, so left is popped first). Then pop the top and visit it. Repeat.</p>
+
+    <div class="mental-model">
+      <div class="title">Why Recursion IS DFS</div>
+      <p>When you write a recursive tree traversal, the <strong>call stack</strong> IS the DFS stack. Each recursive call pushes a frame; returning pops it. Recursion is just DFS with the stack managed for you.</p>
+    </div>
+
+    ${renderQuiz2('dfs_q1',
+      'In the DFS traversal above, why is node 4 visited before node 3?',
+      [
+        'Because 4 < 3 numerically',
+        'Because DFS goes deep down the left branch before visiting the right subtree',
+        'It\'s random — could be either order',
+        'Because 4 is a leaf node'
+      ],
+      1,
+      "DFS follows the left branch all the way down (1 → 2 → 4) before backtracking. Node 3 is on the right side of the root, so it waits on the stack until the entire left subtree is explored. This is the essence of depth-first: exhaust one path before trying another."
+    )}
+
+    <button class="next-btn" onclick="nextSection()">Next: BFS Deep Dive →</button>
+  `;
+}
+
+// ═══════════════════════════
+// Section 2: BFS
+// ═══════════════════════════
+function renderBFS() {
+  const sk = 'bfs';
+  return `
+    <h2>Breadth-First Search <span style="color: var(--cyan);">●</span></h2>
+    <p>BFS visits all nodes at the current depth before moving deeper. Watch how the LEDs light up <span class="cyan">level by level</span>, like a wave spreading outward.</p>
+
+    <div class="viz-panel" data-viz="${sk}" data-mode="bfs">
+      <div class="viz-svg-container">${buildTreeSVG('bfs-tree', 'bfs', sk)}</div>
+      <div class="controls">
+        <button class="bfs" onclick="playAnim('${sk}','bfs')" ${animState[sk].playing ? 'disabled' : ''}>▶ Play</button>
+        <button class="neutral viz-step-fwd" onclick="stepAnim('${sk}','bfs',1)" ${animState[sk].step >= 6 ? 'disabled' : ''}>Step →</button>
+        <button class="neutral viz-step-back" onclick="stepAnim('${sk}','bfs',-1)" ${animState[sk].step <= -1 ? 'disabled' : ''}>← Back</button>
+        <button class="neutral" onclick="resetAnim('${sk}')">Reset</button>
+        <div class="speed-control">
+          <span>Speed</span>
+          <input type="range" min="200" max="1200" value="${1400 - animSpeed}" oninput="setSpeed(parseInt(this.value))">
+        </div>
+      </div>
+      <div class="viz-status">${renderStepMsg(sk, 'bfs')}</div>
+      <div class="viz-ds">${renderDSDisplay(sk, 'bfs')}</div>
+    </div>
+
+    <h3>How the Queue Drives BFS</h3>
+    <p>BFS uses a <span class="cyan">queue</span> — first in, first out. When you visit a node, enqueue its children at the back. Then dequeue from the front and visit. This naturally processes nodes level by level.</p>
+
+    <div class="mental-model">
+      <div class="title">Why BFS Finds the Shortest Path</div>
+      <p>Because BFS explores all nodes at distance 1, then distance 2, then distance 3... the <strong>first time</strong> it reaches any node is guaranteed to be via the shortest path. This is why BFS is the go-to algorithm for shortest-path problems in unweighted graphs.</p>
+    </div>
+
+    ${renderQuiz2('bfs_q1',
+      'In BFS, node 4 and node 5 are visited right after node 3 (not after node 2). Why?',
+      [
+        'Because 4 and 5 are smaller numbers',
+        'Because 4 and 5 were enqueued by node 2, but node 3 was already ahead in the queue',
+        'BFS visits leaves last',
+        'It\'s alphabetical order'
+      ],
+      1,
+      "When node 1 is visited, both 2 and 3 are enqueued. Node 2 is dequeued first and adds 4, 5 to the back of the queue. But node 3 was already in the queue before 4 and 5. So the queue is [3, 4, 5] — node 3 comes first. The queue's FIFO nature ensures all nodes at one level are processed before the next level begins."
+    )}
+
+    <button class="next-btn" onclick="nextSection()">Next: Side by Side →</button>
+  `;
+}
+
+// ═══════════════════════════
+// Section 3: Side by Side
+// ═══════════════════════════
+function renderSideBySide() {
+  return `
+    <h2>Side by Side</h2>
+    <p>Run both traversals simultaneously and compare. Watch how the same tree lights up in completely different patterns.</p>
+
+    <div class="side-by-side">
+      <div class="viz-panel" data-viz="sideDfs" data-mode="dfs">
+        <h3 style="text-align:center; color: var(--accent); margin: 0 0 12px;">DFS</h3>
+        <div class="viz-svg-container">${buildTreeSVG('side-dfs', 'dfs', 'sideDfs', 400, 300)}</div>
+        <div class="controls" style="justify-content: center;">
+          <button class="dfs" onclick="playAnim('sideDfs','dfs')" ${animState.sideDfs.playing ? 'disabled' : ''}>▶ Play</button>
+          <button class="neutral" onclick="resetAnim('sideDfs')">Reset</button>
+        </div>
+        <div class="viz-ds">${renderDSDisplay('sideDfs', 'dfs')}</div>
+      </div>
+      <div class="viz-panel" data-viz="sideBfs" data-mode="bfs">
+        <h3 style="text-align:center; color: var(--cyan); margin: 0 0 12px;">BFS</h3>
+        <div class="viz-svg-container">${buildTreeSVG('side-bfs', 'bfs', 'sideBfs', 400, 300)}</div>
+        <div class="controls" style="justify-content: center;">
+          <button class="bfs" onclick="playAnim('sideBfs','bfs')" ${animState.sideBfs.playing ? 'disabled' : ''}>▶ Play</button>
+          <button class="neutral" onclick="resetAnim('sideBfs')">Reset</button>
+        </div>
+        <div class="viz-ds">${renderDSDisplay('sideBfs', 'bfs')}</div>
+      </div>
+    </div>
+
+    <h3>When to Use Which?</h3>
+    <table class="comparison-table">
+      <tr>
+        <th></th>
+        <th class="col-dfs">DFS</th>
+        <th class="col-bfs">BFS</th>
+      </tr>
+      <tr>
+        <td>Data structure</td>
+        <td class="col-dfs">Stack</td>
+        <td class="col-bfs">Queue</td>
+      </tr>
+      <tr>
+        <td>Memory usage</td>
+        <td class="col-dfs">O(height) — great for deep trees</td>
+        <td class="col-bfs">O(width) — can be heavy for wide trees</td>
+      </tr>
+      <tr>
+        <td>Best for</td>
+        <td class="col-dfs">Path finding, cycle detection, topological sort, exhaustive search</td>
+        <td class="col-bfs">Shortest path, level-order traversal, nearest neighbor</td>
+      </tr>
+      <tr>
+        <td>Recursive?</td>
+        <td class="col-dfs">Naturally recursive (call stack = DFS stack)</td>
+        <td class="col-bfs">Iterative with explicit queue</td>
+      </tr>
+      <tr>
+        <td>Traversal order</td>
+        <td class="col-dfs">1 → 2 → 4 → 5 → 3 → 6 → 7</td>
+        <td class="col-bfs">1 → 2 → 3 → 4 → 5 → 6 → 7</td>
+      </tr>
+    </table>
+
+    <button class="next-btn" onclick="nextSection()">Next: Kotlin Code →</button>
+  `;
+}
+
+// ═══════════════════════════
+// Section 4: Kotlin Code
+// ═══════════════════════════
+function renderCode() {
+  return `
+    <h2>Kotlin Implementation</h2>
+
+    <h3>Tree Node Definition</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin</span>
+<span class="kw">data class</span> <span class="tp">TreeNode</span>(
+    <span class="kw">val</span> <span class="tp">value</span>: <span class="tp">Int</span>,
+    <span class="kw">val</span> <span class="tp">left</span>: <span class="tp">TreeNode</span>? = <span class="kw">null</span>,
+    <span class="kw">val</span> <span class="tp">right</span>: <span class="tp">TreeNode</span>? = <span class="kw">null</span>
+)
+    </div>
+
+    <h3>DFS — Recursive (uses the call stack)</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — DFS Recursive</span>
+<span class="kw">fun</span> <span class="fn">dfs</span>(<span class="tp">node</span>: <span class="tp">TreeNode</span>?) {
+    <span class="kw">if</span> (node == <span class="kw">null</span>) <span class="kw">return</span>       <span class="cm">// base case</span>
+
+    <span class="fn">println</span>(node.value)          <span class="cm">// visit current node</span>
+    <span class="fn">dfs</span>(node.left)               <span class="cm">// recurse left subtree</span>
+    <span class="fn">dfs</span>(node.right)              <span class="cm">// recurse right subtree</span>
+}
+    </div>
+
+    <h3>DFS — Iterative (explicit stack)</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — DFS Iterative</span>
+<span class="kw">fun</span> <span class="fn">dfsIterative</span>(<span class="tp">root</span>: <span class="tp">TreeNode</span>) {
+    <span class="kw">val</span> stack = <span class="fn">ArrayDeque</span>&lt;<span class="tp">TreeNode</span>&gt;()
+    stack.<span class="fn">addLast</span>(root)
+
+    <span class="kw">while</span> (stack.<span class="fn">isNotEmpty</span>()) {
+        <span class="kw">val</span> node = stack.<span class="fn">removeLast</span>()  <span class="cm">// pop</span>
+        <span class="fn">println</span>(node.value)
+
+        <span class="cm">// Push right first so left is processed first (LIFO)</span>
+        node.right?.<span class="kw">let</span> { stack.<span class="fn">addLast</span>(it) }
+        node.left?.<span class="kw">let</span> { stack.<span class="fn">addLast</span>(it) }
+    }
+}
+    </div>
+
+    <h3>BFS — Iterative (queue)</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — BFS</span>
+<span class="kw">fun</span> <span class="fn">bfs</span>(<span class="tp">root</span>: <span class="tp">TreeNode</span>) {
+    <span class="kw">val</span> queue = <span class="fn">ArrayDeque</span>&lt;<span class="tp">TreeNode</span>&gt;()
+    queue.<span class="fn">addLast</span>(root)
+
+    <span class="kw">while</span> (queue.<span class="fn">isNotEmpty</span>()) {
+        <span class="kw">val</span> node = queue.<span class="fn">removeFirst</span>()  <span class="cm">// dequeue</span>
+        <span class="fn">println</span>(node.value)
+
+        <span class="cm">// Enqueue children — left first, then right</span>
+        node.left?.<span class="kw">let</span> { queue.<span class="fn">addLast</span>(it) }
+        node.right?.<span class="kw">let</span> { queue.<span class="fn">addLast</span>(it) }
+    }
+}
+    </div>
+
+    <div class="mental-model">
+      <div class="title">The One-Line Difference</div>
+      <p>Look at the iterative DFS and BFS code. They're almost identical. The only difference:</p>
+      <p><span class="accent">DFS</span>: <code>stack.removeLast()</code> — takes from the <strong>top</strong> (LIFO)</p>
+      <p><span class="cyan">BFS</span>: <code>queue.removeFirst()</code> — takes from the <strong>front</strong> (FIFO)</p>
+      <p>That single line change completely transforms the traversal order. The data structure is the algorithm.</p>
+    </div>
+
+    ${renderQuiz2('code_q1',
+      'If you accidentally used removeFirst() in the DFS code (making it a queue), what traversal order would you get?',
+      [
+        'Still DFS — order doesn\'t matter',
+        'BFS — you\'d get level-order traversal',
+        'Random order',
+        'Reverse DFS'
+      ],
+      1,
+      "Exactly! Swapping removeLast() (stack) for removeFirst() (queue) converts DFS into BFS. The loop structure is identical — only the pop/dequeue direction differs. This is why understanding stacks vs queues is so fundamental."
+    )}
+
+    <button class="next-btn" onclick="nextSection()">Next: Final Quiz →</button>
+  `;
+}
+
+// ═══════════════════════════
+// Section 5: Quiz
+// ═══════════════════════════
+function renderQuizSection() {
+  const qs = ['fq1','fq2','fq3','fq4'];
+  const answered = qs.filter(q => quizAnswers[q] !== undefined).length;
+  const correct = qs.filter(q => quizAnswers[q] === true).length;
+
+  return `
+    <h2>Final Quiz</h2>
+    <p>Four questions to lock in your understanding of graph traversal.</p>
+    ${answered === qs.length ? `<div style="display:inline-flex;align-items:center;gap:8px;background:var(--surface2);padding:6px 14px;border-radius:20px;font-size:0.85em;color:var(--green);margin-bottom:16px;">Score: ${correct}/${qs.length} ${correct === qs.length ? '— Perfect!' : correct >= 3 ? '— Solid!' : '— Review the earlier sections'}</div>` : ''}
+
+    ${renderQuiz2('fq1',
+      'You need to find whether a path exists between two nodes in a very deep tree (depth = 10,000). Which traversal avoids a stack overflow?',
+      [
+        'Recursive DFS',
+        'Iterative DFS with an explicit stack',
+        'BFS',
+        'Both B and C'
+      ],
+      3,
+      "Recursive DFS would overflow the call stack at depth 10,000. Both iterative DFS (explicit stack on the heap) and BFS (queue on the heap) avoid this because they manage memory on the heap, not the call stack. For very deep trees, always go iterative."
+    )}
+
+    ${renderQuiz2('fq2',
+      'You\'re building a web crawler that should find the nearest page matching a keyword from a starting URL. Which traversal do you use?',
+      [
+        'DFS — go deep into link chains',
+        'BFS — find the closest match first',
+        'Either works equally well',
+        'Neither — use binary search'
+      ],
+      1,
+      "BFS! Since it explores all pages at distance 1, then distance 2, etc., the first match it finds is guaranteed to be the nearest one. DFS might find a match 50 links deep while a match exists just 2 links away."
+    )}
+
+    ${renderQuiz2('fq3',
+      'In a balanced binary tree with 1 million nodes, which uses less memory?',
+      [
+        'DFS — O(log n) stack depth ≈ 20 frames',
+        'BFS — O(n) queue at widest level ≈ 500,000 nodes',
+        'They use the same memory',
+        'Depends on the data'
+      ],
+      0,
+      "In a balanced binary tree, DFS only needs stack space equal to the height: log₂(1,000,000) ≈ 20. BFS needs to hold the entire widest level in the queue, which for a balanced tree is about n/2 = 500,000 nodes. DFS is vastly more memory-efficient here."
+    )}
+
+    ${renderQuiz2('fq4',
+      'What is the DFS pre-order traversal of this tree?\\n\\n        A\\n       / \\\\\\n      B   C\\n     /\\n    D',
+      [
+        'A, B, D, C',
+        'D, B, A, C',
+        'A, B, C, D',
+        'D, B, C, A'
+      ],
+      0,
+      "Pre-order DFS visits: root first, then left subtree, then right subtree. So: A (root) → B (left child) → D (B's left child, leaf) → C (right child of A). Answer: A, B, D, C."
+    )}
+
+    ${answered === qs.length ? `
+    <div class="mental-model" style="margin-top: 30px;">
+      <div class="title">Your Traversal Cheat Sheet</div>
+      <p><strong>Need shortest path?</strong> → BFS</p>
+      <p><strong>Need to explore all paths?</strong> → DFS</p>
+      <p><strong>Tree is very deep?</strong> → Iterative DFS or BFS (avoid recursion)</p>
+      <p><strong>Tree is very wide?</strong> → DFS (less memory)</p>
+      <p><strong>Want level-order output?</strong> → BFS</p>
+      <p><strong>Implementing recursively?</strong> → You're already doing DFS</p>
+    </div>
+    ` : ''}
+  `;
+}
+
+// ═══════════════════════════
+// Quiz Component
+// ═══════════════════════════
+function renderQuiz2(id, question, options, correctIdx, explanation) {
+  const answered = quizAnswers[id] !== undefined;
+  const selectedIdx = quizAnswers[id + '_sel'];
+
+  return `
+    <div class="quiz-card">
+      <h4>Quiz</h4>
+      <div class="question" style="white-space: pre-wrap;">${question}</div>
+      <div class="quiz-options">
+        ${options.map((opt, i) => {
+          let cls = '';
+          if (answered) {
+            if (i === correctIdx) cls = 'correct';
+            else if (i === selectedIdx && i !== correctIdx) cls = 'wrong';
+          }
+          return `<button class="quiz-option ${cls}" ${answered ? 'disabled' : ''} onclick="answerQuiz2('${id}', ${i}, ${correctIdx})">${opt}</button>`;
+        }).join('')}
+      </div>
+      ${answered ? `<div class="quiz-explanation ${quizAnswers[id] ? 'correct' : 'wrong'}">${quizAnswers[id] ? '✓ Correct!' : '✗ Not quite.'} ${explanation}</div>` : ''}
+    </div>
+  `;
+}
+
+function answerQuiz2(id, selected, correct) {
+  quizAnswers[id] = selected === correct;
+  quizAnswers[id + '_sel'] = selected;
+  render();
+}
+
+// ── Fix code block indentation ──
+function fixCodeBlocks() {
+  document.querySelectorAll('.code-block, .step-trace').forEach(block => {
+    const html = block.innerHTML;
+    const lines = html.split('\n');
+    while (lines.length && lines[0].trim() === '') lines.shift();
+    while (lines.length && lines[lines.length - 1].trim() === '') lines.pop();
+    const contentLines = lines.filter(l => l.trim() !== '' && !l.trim().match(/^<span class="lang-tag">.*<\/span>$/));
+    const indents = contentLines.map(l => {
+      const match = l.match(/^( *)/);
+      return match ? match[1].length : 0;
+    });
+    const minIndent = Math.min(...indents);
+    if (minIndent > 0) {
+      const fixed = lines.map(l => {
+        let stripped = 0;
+        let i = 0;
+        while (i < l.length && l[i] === ' ' && stripped < minIndent) { i++; stripped++; }
+        return l.slice(i);
+      });
+      block.innerHTML = fixed.join('\n');
+    } else {
+      block.innerHTML = lines.join('\n');
+    }
+  });
+}
+
+// ── Init ──
+render();
+</script>
+</body>
+</html>
