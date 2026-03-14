@@ -635,7 +635,8 @@ const sections = [
   "BFS Deep Dive",
   "Side by Side",
   "Kotlin Code",
-  "Quiz"
+  "Quiz",
+  "Problems"
 ];
 
 // ── Binary Tree Definition ──
@@ -789,6 +790,7 @@ function renderSection(i) {
     case 3: return renderSideBySide();
     case 4: return renderCode();
     case 5: return renderQuizSection();
+    case 6: return renderProblems();
   }
 }
 
@@ -1351,6 +1353,8 @@ function renderQuizSection() {
       <p><strong>Implementing recursively?</strong> → You're already doing DFS</p>
     </div>
     ` : ''}
+
+    <button class="next-btn" onclick="nextSection()">Next: Problems →</button>
   `;
 }
 
@@ -1384,6 +1388,375 @@ function answerQuiz2(id, selected, correct) {
   quizAnswers[id] = selected === correct;
   quizAnswers[id + '_sel'] = selected;
   render();
+}
+
+// ═══════════════════════════
+// Section 6: Problems
+// ═══════════════════════════
+
+// ── Construct Binary Tree from Preorder & Inorder ──
+// Step-through state
+let constructStep = -1;
+let constructPlaying = false;
+let constructTimer = null;
+
+function getConstructSteps() {
+  // preorder = [1,2,3,4], inorder = [2,1,3,4]
+  // We'll trace through the algorithm step by step
+  return [
+    {
+      desc: '<strong>Start:</strong> Call <code>dfs(limit = MAX)</code>. preOrderIndex = 0, inOrderIndex = 0.<br>preorder[0] = <span class="accent">1</span> — this is our root.',
+      tree: { 1: { left: null, right: null, active: true } },
+      preIdx: 1, inIdx: 0,
+      highlight: 'Create root node <b>1</b>. Now recurse left: <code>dfs(limit = 1)</code>',
+      preHL: [0], inHL: [],
+    },
+    {
+      desc: '<strong>Recurse left of 1:</strong> <code>dfs(limit = 1)</code>. preorder[1] = 2. Check: inorder[0] = 2, is 2 == limit(1)? No. So create node <span class="accent">2</span>.',
+      tree: { 1: { left: 2, right: null }, 2: { left: null, right: null, active: true } },
+      preIdx: 2, inIdx: 0,
+      highlight: 'Create node <b>2</b> as left child of <b>1</b>. Now recurse left: <code>dfs(limit = 2)</code>',
+      preHL: [1], inHL: [],
+    },
+    {
+      desc: '<strong>Recurse left of 2:</strong> <code>dfs(limit = 2)</code>. Check: inorder[0] = <span class="cyan">2</span> == limit(2)? <span class="accent">Yes!</span> This means node 2 has no left child. Increment inOrderIndex to 1.',
+      tree: { 1: { left: 2, right: null }, 2: { left: 'nil', right: null, active: true } },
+      preIdx: 2, inIdx: 1,
+      highlight: 'Hit the limit! Node <b>2</b> has no left child. inOrderIndex moves past <b>2</b>. Return null, now recurse right of <b>2</b>: <code>dfs(limit = 1)</code>',
+      preHL: [], inHL: [0],
+    },
+    {
+      desc: '<strong>Recurse right of 2:</strong> <code>dfs(limit = 1)</code>. Check: inorder[1] = <span class="cyan">1</span> == limit(1)? <span class="accent">Yes!</span> Node 2 has no right child either. Increment inOrderIndex to 2.',
+      tree: { 1: { left: 2, right: null }, 2: { left: 'nil', right: 'nil', done: true } },
+      preIdx: 2, inIdx: 2,
+      highlight: 'Hit the limit again! Node <b>2</b> is a leaf. inOrderIndex moves past <b>1</b>. Return null, now recurse right of <b>1</b>: <code>dfs(limit = MAX)</code>',
+      preHL: [], inHL: [1],
+    },
+    {
+      desc: '<strong>Recurse right of 1:</strong> <code>dfs(limit = MAX)</code>. preorder[2] = 3. Check: inorder[2] = 3, is 3 == MAX? No. Create node <span class="accent">3</span>.',
+      tree: { 1: { left: 2, right: 3 }, 2: { left: 'nil', right: 'nil', done: true }, 3: { left: null, right: null, active: true } },
+      preIdx: 3, inIdx: 2,
+      highlight: 'Create node <b>3</b> as right child of <b>1</b>. Now recurse left: <code>dfs(limit = 3)</code>',
+      preHL: [2], inHL: [],
+    },
+    {
+      desc: '<strong>Recurse left of 3:</strong> <code>dfs(limit = 3)</code>. Check: inorder[2] = <span class="cyan">3</span> == limit(3)? <span class="accent">Yes!</span> Node 3 has no left child. Increment inOrderIndex to 3.',
+      tree: { 1: { left: 2, right: 3 }, 2: { left: 'nil', right: 'nil', done: true }, 3: { left: 'nil', right: null, active: true } },
+      preIdx: 3, inIdx: 3,
+      highlight: 'Hit the limit! Node <b>3</b> has no left child. inOrderIndex moves past <b>3</b>. Return null, now recurse right of <b>3</b>: <code>dfs(limit = MAX)</code>',
+      preHL: [], inHL: [2],
+    },
+    {
+      desc: '<strong>Recurse right of 3:</strong> <code>dfs(limit = MAX)</code>. preorder[3] = 4. Check: inorder[3] = 4, is 4 == MAX? No. Create node <span class="accent">4</span>.',
+      tree: { 1: { left: 2, right: 3 }, 2: { left: 'nil', right: 'nil', done: true }, 3: { left: 'nil', right: 4 }, 4: { left: null, right: null, active: true } },
+      preIdx: 4, inIdx: 3,
+      highlight: 'Create node <b>4</b> as right child of <b>3</b>. preOrderIndex = 4 which is >= array size, so further recursions return null.',
+      preHL: [3], inHL: [],
+    },
+    {
+      desc: '<strong>Done!</strong> preOrderIndex has reached the end. All recursions return. The tree is fully constructed.',
+      tree: { 1: { left: 2, right: 3, root: true }, 2: { left: 'nil', right: 'nil', done: true }, 3: { left: 'nil', right: 4, done: true }, 4: { left: 'nil', right: 'nil', done: true } },
+      preIdx: 4, inIdx: 4,
+      highlight: 'Tree construction complete! Output: [1, 2, 3, null, null, null, 4]',
+      preHL: [], inHL: [],
+    },
+  ];
+}
+
+function buildConstructTreeSVG(step) {
+  const w = 460, h = 300;
+  const steps = getConstructSteps();
+  const s = step >= 0 ? steps[Math.min(step, steps.length - 1)] : null;
+
+  const nodes = {};
+  if (s) {
+    Object.keys(s.tree).forEach(k => { nodes[parseInt(k)] = s.tree[parseInt(k)]; });
+  }
+
+  // Positions for potential nodes
+  const positions = {
+    1: { x: w/2, y: 50 },
+    2: { x: w/2 - 120, y: 150 },
+    3: { x: w/2 + 120, y: 150 },
+    4: { x: w/2 + 200, y: 250 },
+  };
+
+  // edges
+  const edges = [];
+  if (s) {
+    if (s.tree[1]?.left === 2) edges.push({from: 1, to: 2});
+    if (s.tree[1]?.right === 3) edges.push({from: 1, to: 3});
+    if (s.tree[3]?.right === 4) edges.push({from: 3, to: 4});
+  }
+
+  let svg = `<svg class="tree-svg" viewBox="0 0 ${w} ${h}" style="height: 300px;">`;
+
+  // Draw edges
+  edges.forEach(e => {
+    const p1 = positions[e.from];
+    const p2 = positions[e.to];
+    svg += `<line class="tree-edge lit-dfs" x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}"/>`;
+  });
+
+  // Draw nodes
+  Object.keys(nodes).forEach(k => {
+    const id = parseInt(k);
+    const p = positions[id];
+    if (!p) return;
+    const n = nodes[id];
+    const isActive = n.active;
+    const isDone = n.done;
+    const isRoot = n.root;
+    let cls = 'led-node lit-dfs';
+    if (isActive) cls += ' current';
+
+    svg += `<g class="${cls}" transform="translate(${p.x},${p.y})">`;
+    svg += `<circle class="led-base" r="24"/>`;
+    svg += `<circle class="led-shine" r="18" cy="-4"/>`;
+    svg += `<text class="led-label" dy="1">${id}</text>`;
+    svg += `</g>`;
+  });
+
+  if (!s) {
+    svg += `<text x="${w/2}" y="${h/2}" text-anchor="middle" fill="#94a3b8" font-size="14">Click Step or Play to begin</text>`;
+  }
+
+  svg += `</svg>`;
+  return svg;
+}
+
+function renderConstructArrays(step) {
+  const preorder = [1, 2, 3, 4];
+  const inorder = [2, 1, 3, 4];
+  const steps = getConstructSteps();
+  const s = step >= 0 ? steps[Math.min(step, steps.length - 1)] : null;
+
+  function renderArr(arr, label, hlIndices, ptrIdx, ptrLabel) {
+    let html = `<div style="margin: 8px 0;"><span style="color: var(--text-dim); font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">${label}</span><div style="display: flex; gap: 4px; margin-top: 4px;">`;
+    arr.forEach((v, i) => {
+      let bg = 'var(--surface)';
+      let border = 'var(--border)';
+      let color = 'var(--text)';
+      if (s && hlIndices.includes(i)) { bg = 'rgba(233, 69, 96, 0.25)'; border = 'var(--accent)'; color = 'var(--accent)'; }
+      if (s && i < ptrIdx) { color = 'var(--text-dim)'; }
+      html += `<div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: ${bg}; border: 2px solid ${border}; border-radius: 8px; font-family: monospace; font-size: 1.1em; font-weight: 700; color: ${color}; position: relative;">`;
+      html += `${v}`;
+      if (s && i === ptrIdx) {
+        html += `<span style="position: absolute; top: -18px; font-size: 0.6em; color: var(--cyan); font-weight: 700;">${ptrLabel}</span>`;
+      }
+      html += `</div>`;
+    });
+    html += `</div></div>`;
+    return html;
+  }
+
+  const preIdx = s ? s.preIdx : 0;
+  const inIdx = s ? s.inIdx : 0;
+  const preHL = s ? s.preHL : [];
+  const inHL = s ? s.inHL : [];
+
+  return `
+    ${renderArr(preorder, 'Preorder', preHL, Math.min(preIdx, preorder.length), 'preIdx')}
+    ${renderArr(inorder, 'Inorder', inHL, Math.min(inIdx, inorder.length), 'inIdx')}
+  `;
+}
+
+function stepConstruct(dir) {
+  const maxStep = getConstructSteps().length - 1;
+  constructStep = Math.max(-1, Math.min(maxStep, constructStep + dir));
+  updateConstructViz();
+}
+
+function playConstruct() {
+  if (constructPlaying) return;
+  constructPlaying = true;
+  const maxStep = getConstructSteps().length - 1;
+  function tick() {
+    if (constructStep >= maxStep) { constructPlaying = false; updateConstructViz(); return; }
+    constructStep++;
+    updateConstructViz();
+    constructTimer = setTimeout(tick, 1200);
+  }
+  tick();
+}
+
+function resetConstruct() {
+  if (constructTimer) clearTimeout(constructTimer);
+  constructPlaying = false;
+  constructStep = -1;
+  updateConstructViz();
+}
+
+function updateConstructViz() {
+  const panel = document.querySelector('.construct-viz-panel');
+  if (!panel) { render(); return; }
+
+  const svgContainer = panel.querySelector('.construct-svg');
+  if (svgContainer) svgContainer.innerHTML = buildConstructTreeSVG(constructStep);
+
+  const arrContainer = panel.querySelector('.construct-arrays');
+  if (arrContainer) arrContainer.innerHTML = renderConstructArrays(constructStep);
+
+  const msgContainer = panel.querySelector('.construct-msg');
+  if (msgContainer) {
+    const steps = getConstructSteps();
+    if (constructStep >= 0) {
+      const s = steps[Math.min(constructStep, steps.length - 1)];
+      msgContainer.innerHTML = `<div class="status-msg dfs-msg">${s.desc}</div><div style="margin-top: 8px; padding: 10px 14px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; color: #6ee7b7; font-size: 0.88em;">${s.highlight}</div>`;
+    } else {
+      msgContainer.innerHTML = '';
+    }
+  }
+
+  // Update buttons
+  const maxStep = getConstructSteps().length - 1;
+  const fwd = panel.querySelector('.c-step-fwd');
+  if (fwd) fwd.disabled = constructStep >= maxStep;
+  const back = panel.querySelector('.c-step-back');
+  if (back) back.disabled = constructStep <= -1;
+}
+
+function renderProblems() {
+  return `
+    <h2>Problems</h2>
+    <p>Apply what you\'ve learned about tree traversals to solve real problems.</p>
+
+    <div style="background: var(--surface); border: 2px solid var(--accent2); border-radius: 12px; padding: 24px; margin: 20px 0;">
+      <h3 style="color: var(--accent); margin-bottom: 4px;">Problem 1: Construct Binary Tree from Preorder & Inorder</h3>
+      <p style="color: var(--text-dim); font-size: 0.9em; margin-bottom: 16px;">Difficulty: Medium</p>
+
+      <p>You are given two integer arrays <code>preorder</code> and <code>inorder</code>:</p>
+      <p style="margin: 8px 0;">• <code>preorder</code> is the preorder traversal of a binary tree</p>
+      <p style="margin: 8px 0;">• <code>inorder</code> is the inorder traversal of the same tree</p>
+      <p style="margin: 8px 0;">• Both arrays have the same size and consist of unique values</p>
+      <p style="margin-top: 12px;"><strong>Rebuild the binary tree</strong> from these two traversals and return its root.</p>
+    </div>
+
+    <h3>Examples</h3>
+    <div class="step-trace">Example 1:
+Input:  preorder = [1, 2, 3, 4], inorder = [2, 1, 3, 4]
+Output: [1, 2, 3, null, null, null, 4]
+
+        1
+       / \\
+      2   3
+           \\
+            4</div>
+
+    <div class="step-trace">Example 2:
+Input:  preorder = [1], inorder = [1]
+Output: [1]
+
+    1</div>
+
+    <h3>Key Insight</h3>
+    <div class="mental-model">
+      <div class="title">Why Preorder + Inorder Is Enough</div>
+      <p><strong>Preorder</strong> tells you the <span class="accent">root</span> of each subtree — the first element is always the root.</p>
+      <p><strong>Inorder</strong> tells you the <span class="cyan">boundary</span> — everything before the root is in the left subtree, everything after is in the right subtree.</p>
+      <p style="margin-top: 8px;">The clever trick in this solution: instead of finding the root in the inorder array each time (O(n)), we use a <code>limit</code> parameter. When <code>inorder[inOrderIndex] == limit</code>, we know we\'ve reached the boundary of the current subtree.</p>
+    </div>
+
+    <h3>Algorithm Walkthrough</h3>
+    <p>Step through the algorithm on <code>preorder = [1,2,3,4]</code>, <code>inorder = [2,1,3,4]</code>:</p>
+
+    <div class="construct-viz-panel" style="margin: 20px 0;">
+      <div class="construct-svg">${buildConstructTreeSVG(constructStep)}</div>
+      <div class="construct-arrays">${renderConstructArrays(constructStep)}</div>
+      <div class="controls">
+        <button class="dfs" onclick="playConstruct()" ${constructPlaying ? 'disabled' : ''}>▶ Play</button>
+        <button class="neutral c-step-fwd" onclick="stepConstruct(1)" ${constructStep >= getConstructSteps().length - 1 ? 'disabled' : ''}>Step →</button>
+        <button class="neutral c-step-back" onclick="stepConstruct(-1)" ${constructStep <= -1 ? 'disabled' : ''}>← Back</button>
+        <button class="neutral" onclick="resetConstruct()">Reset</button>
+      </div>
+      <div class="construct-msg">${constructStep >= 0 ? (() => { const s = getConstructSteps()[Math.min(constructStep, getConstructSteps().length - 1)]; return '<div class="status-msg dfs-msg">' + s.desc + '</div><div style="margin-top: 8px; padding: 10px 14px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; color: #6ee7b7; font-size: 0.88em;">' + s.highlight + '</div>'; })() : ''}</div>
+    </div>
+
+    <h3>How <code>dfs(limit)</code> Works</h3>
+    <div class="analogy">
+      <div class="title">The Limit Trick</div>
+      <p>The <code>limit</code> parameter acts as a fence. When building the left subtree of a node, we set <code>limit = node.val</code>. This way, when we encounter the node\'s value in the inorder array, we know the left subtree is done.</p>
+      <p style="margin-top: 8px;">For the right subtree, we pass the parent\'s limit down — the fence moves up to the grandparent level.</p>
+      <p style="margin-top: 8px;">The initial call uses <code>Int.MAX_VALUE</code> as the limit — there\'s no upper fence for the root\'s subtree.</p>
+    </div>
+
+    <h3>Solution — Kotlin</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin</span>
+<span class="kw">class</span> <span class="tp">ConstructTree</span> {
+    <span class="kw">private var</span> preOrderIndex = <span class="nm">0</span>
+    <span class="kw">private var</span> inOrderIndex = <span class="nm">0</span>
+
+    <span class="kw">fun</span> <span class="fn">buildTree</span>(preorder: <span class="tp">IntArray</span>, inorder: <span class="tp">IntArray</span>): <span class="tp">TreeNode</span>? {
+
+        <span class="kw">fun</span> <span class="fn">dfs</span>(limit: <span class="tp">Int</span>): <span class="tp">TreeNode</span>? {
+            <span class="cm">// Base case 1: consumed all preorder elements</span>
+            <span class="kw">if</span> (preOrderIndex >= preorder.size) {
+                <span class="kw">return null</span>
+            }
+
+            <span class="cm">// Base case 2: hit the boundary in inorder</span>
+            <span class="kw">if</span> (inorder[inOrderIndex] == limit) {
+                inOrderIndex++
+                <span class="kw">return null</span>
+            }
+
+            <span class="cm">// Create node from next preorder element</span>
+            <span class="kw">val</span> root = <span class="fn">TreeNode</span>(preorder[preOrderIndex])
+            preOrderIndex++
+
+            <span class="cm">// Build left subtree (bounded by current node\'s value)</span>
+            root.left = <span class="fn">dfs</span>(root.\`val\`)
+
+            <span class="cm">// Build right subtree (bounded by parent\'s limit)</span>
+            root.right = <span class="fn">dfs</span>(limit)
+
+            <span class="kw">return</span> root
+        }
+
+        <span class="kw">return</span> <span class="fn">dfs</span>(<span class="tp">Int</span>.MAX_VALUE)
+    }
+}
+    </div>
+
+    <h3>Complexity</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0;">
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center;">
+        <div style="font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 6px;">Time</div>
+        <div style="font-size: 1.3em; font-weight: 700; color: var(--green);">O(n)</div>
+        <div style="font-size: 0.82em; color: var(--text-dim); margin-top: 4px;">Each node visited exactly once</div>
+      </div>
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center;">
+        <div style="font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 6px;">Space</div>
+        <div style="font-size: 1.3em; font-weight: 700; color: var(--cyan);">O(n)</div>
+        <div style="font-size: 0.82em; color: var(--text-dim); margin-top: 4px;">Recursion stack + output tree</div>
+      </div>
+    </div>
+
+    ${renderQuiz2('prob_q1',
+      'Why does the algorithm pass root.val as the limit when building the left subtree?',
+      [
+        'Because the left subtree values are always less than the root',
+        'Because in inorder traversal, the root appears right after its left subtree — so hitting root.val means the left subtree is complete',
+        'To avoid stack overflow',
+        'It\'s just a random sentinel value'
+      ],
+      1,
+      "In an inorder traversal, the sequence is: [left subtree] → root → [right subtree]. So when we\'re building the left subtree and encounter root.val in the inorder array, it means we\'ve exhausted all left-subtree nodes. The limit acts as a boundary marker, not a value comparison."
+    )}
+
+    ${renderQuiz2('prob_q2',
+      'What would happen if we swapped the order of root.left = dfs(root.val) and root.right = dfs(limit)?',
+      [
+        'Nothing — order doesn\'t matter',
+        'The tree would be mirrored (left and right swapped)',
+        'It would crash',
+        'It would build the correct tree but slower'
+      ],
+      1,
+      "The order matters! The preorder array is consumed left-to-right. Calling dfs for the right subtree first would assign left-subtree nodes to the right side and vice versa, producing a mirrored tree. The algorithm relies on processing left before right to match the preorder sequence."
+    )}
+  `;
 }
 
 // ── Fix code block indentation ──
