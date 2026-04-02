@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prefix Tree (Trie) — Interactive Visualization</title>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --surface2: #0f3460;
+  --accent: #e94560;
+  --accent2: #7c3aed;
+  --green: #10b981;
+  --yellow: #f59e0b;
+  --cyan: #06b6d4;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --code-bg: #0d1117;
+  --border: #334155;
+  --trie-node: #2a2a4e;
+  --trie-lit: #7c3aed;
+  --trie-end: #10b981;
+  --trie-glow: rgba(124, 58, 237, 0.5);
+  --trie-end-glow: rgba(16, 185, 129, 0.5);
+  --trie-search-hit: #06b6d4;
+  --trie-search-miss: #e94560;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+header {
+  text-align: center;
+  padding: 40px 0 30px;
+  border-bottom: 2px solid var(--surface2);
+  margin-bottom: 30px;
+}
+
+header h1 {
+  font-size: 2.4em;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent2), var(--green));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+
+header p { color: var(--text-dim); font-size: 1.1em; }
+
+.progress-bar {
+  height: 4px;
+  background: var(--surface);
+  border-radius: 4px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.progress-bar .fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--green));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+  background: var(--surface);
+  padding: 8px;
+  border-radius: 12px;
+}
+
+.nav button {
+  flex: 1;
+  min-width: 80px;
+  padding: 10px 8px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.82em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.nav button:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.nav button.active {
+  background: var(--accent2);
+  color: white;
+  border-color: var(--accent2);
+}
+
+.section { animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+h2 {
+  font-size: 1.6em;
+  font-weight: 800;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+h3 {
+  font-size: 1.15em;
+  font-weight: 700;
+  margin: 24px 0 12px;
+  color: var(--text);
+}
+
+p { margin-bottom: 12px; }
+
+code {
+  background: var(--code-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.88em;
+  color: var(--cyan);
+}
+
+.accent { color: var(--accent); font-weight: 700; }
+.cyan { color: var(--cyan); font-weight: 700; }
+.green { color: var(--green); font-weight: 700; }
+.highlight { background: rgba(124, 58, 237, 0.2); padding: 2px 6px; border-radius: 4px; }
+
+.code-block {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin: 14px 0;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.85em;
+  line-height: 1.8;
+  overflow-x: auto;
+  position: relative;
+  white-space: pre;
+}
+
+.code-block .lang-tag {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 0.7em;
+  color: var(--text-muted, var(--text-dim));
+  background: var(--surface);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: system-ui;
+  white-space: normal;
+}
+
+.kw { color: #c678dd; }
+.fn { color: #61afef; }
+.tp { color: #e5c07b; }
+.cm { color: #5c6370; font-style: italic; }
+.nm { color: #d19a66; }
+.st { color: #98c379; }
+
+/* Trie Canvas */
+.trie-container {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin: 20px 0;
+  min-height: 400px;
+}
+
+.trie-svg {
+  width: 100%;
+  height: 420px;
+}
+
+.trie-svg text {
+  font-family: 'Fira Code', monospace;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.trie-svg .node-circle {
+  transition: fill 0.3s, filter 0.3s, stroke 0.3s;
+}
+
+.trie-svg .edge-line {
+  stroke: var(--border);
+  stroke-width: 2;
+  transition: stroke 0.3s;
+}
+
+.trie-svg .edge-line.lit {
+  stroke: var(--accent2);
+  stroke-width: 2.5;
+}
+
+.trie-svg .edge-line.search-hit {
+  stroke: var(--trie-search-hit);
+  stroke-width: 3;
+}
+
+.trie-svg .edge-line.search-miss {
+  stroke: var(--trie-search-miss);
+  stroke-width: 3;
+}
+
+@keyframes pulse {
+  0%, 100% { filter: drop-shadow(0 0 6px var(--trie-glow)); }
+  50% { filter: drop-shadow(0 0 16px var(--trie-glow)); }
+}
+
+@keyframes pulseGreen {
+  0%, 100% { filter: drop-shadow(0 0 6px var(--trie-end-glow)); }
+  50% { filter: drop-shadow(0 0 16px var(--trie-end-glow)); }
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 14px 0;
+}
+
+.input-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.input-group input[type="text"] {
+  padding: 8px 14px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--text);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.9em;
+  outline: none;
+  width: 160px;
+  transition: border-color 0.2s;
+}
+
+.input-group input[type="text"]:focus {
+  border-color: var(--accent2);
+}
+
+.controls button {
+  padding: 8px 18px;
+  border: 2px solid var(--accent2);
+  border-radius: 8px;
+  background: var(--accent2);
+  color: white;
+  font-size: 0.85em;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.controls button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.controls button.search-btn {
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.controls button.prefix-btn {
+  background: var(--yellow);
+  border-color: var(--yellow);
+  color: #1a1a2e;
+}
+
+.controls button.neutral {
+  background: transparent;
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+}
+
+.controls button.neutral:hover:not(:disabled) {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+/* Word list */
+.word-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.word-chip {
+  padding: 4px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  font-size: 0.82em;
+  font-family: 'Fira Code', monospace;
+  color: var(--text-dim);
+  transition: all 0.2s;
+}
+
+.word-chip.inserted {
+  border-color: var(--accent2);
+  color: var(--accent2);
+  background: rgba(124, 58, 237, 0.1);
+}
+
+/* Status message */
+.status-msg {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.9em;
+  line-height: 1.5;
+  animation: fadeIn 0.3s ease;
+}
+
+.status-msg.info {
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  color: #c4b5fd;
+}
+
+.status-msg.success {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+.status-msg.error {
+  background: rgba(233, 69, 96, 0.08);
+  border: 1px solid rgba(233, 69, 96, 0.2);
+  color: #fca5a5;
+}
+
+.status-msg.search-msg {
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  color: #67e8f9;
+}
+
+/* Analogy / mental model boxes */
+.analogy {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(233, 69, 96, 0.1));
+  border: 1px solid var(--accent2);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin: 18px 0;
+}
+
+.analogy .title {
+  font-weight: 700;
+  color: var(--accent2);
+  margin-bottom: 6px;
+}
+
+.mental-model {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin: 18px 0;
+}
+
+.mental-model .title {
+  font-weight: 700;
+  color: var(--yellow);
+  margin-bottom: 6px;
+}
+
+/* Quiz */
+.quiz-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0;
+}
+
+.quiz-card h4 {
+  color: var(--yellow);
+  margin-bottom: 4px;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.quiz-card .question {
+  font-size: 1.05em;
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quiz-option {
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.95em;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.quiz-option:hover:not(:disabled) {
+  border-color: var(--accent2);
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.quiz-option.correct {
+  border-color: var(--green);
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--green);
+}
+
+.quiz-option.wrong {
+  border-color: var(--accent);
+  background: rgba(233, 69, 96, 0.15);
+  color: var(--accent);
+}
+
+.quiz-explanation {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 0.9em;
+  line-height: 1.6;
+  animation: fadeIn 0.3s ease;
+}
+
+.quiz-explanation.correct {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--green);
+}
+
+.quiz-explanation.wrong {
+  background: rgba(233, 69, 96, 0.1);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  color: #fca5a5;
+}
+
+.next-btn {
+  display: block;
+  margin: 30px auto 0;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, var(--accent2), var(--green));
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 1em;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.next-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.3);
+}
+
+.step-trace {
+  font-family: monospace;
+  font-size: 0.88em;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 12px 0;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+  font-size: 0.82em;
+  color: var(--text-dim);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid;
+}
+
+@media (max-width: 600px) {
+  .app { padding: 12px; }
+  header h1 { font-size: 1.6em; }
+  .nav button { font-size: 0.75em; padding: 8px 4px; min-width: 60px; }
+  .trie-svg { height: 320px; }
+  .input-group input[type="text"] { width: 120px; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="root"></div>
+
+<script>
+// ── State ──
+let currentSection = 0;
+let quizAnswers = {};
+
+const sections = [
+  "The Idea",
+  "How It Works",
+  "Try It",
+  "Kotlin Code",
+  "Quiz"
+];
+
+// ── Trie Data Structure (mirrored for visualization) ──
+class TrieViz {
+  constructor() {
+    this.root = { children: {}, endOfWord: false, id: 'root' };
+    this.nodeCount = 1;
+  }
+
+  insert(word) {
+    let current = this.root;
+    const path = [];
+    for (const c of word.toLowerCase()) {
+      if (c < 'a' || c > 'z') continue;
+      if (!current.children[c]) {
+        current.children[c] = { children: {}, endOfWord: false, id: 'n' + (this.nodeCount++) };
+      }
+      path.push({ node: current.children[c], char: c });
+      current = current.children[c];
+    }
+    current.endOfWord = true;
+    return path;
+  }
+
+  search(word) {
+    let current = this.root;
+    const path = [];
+    for (const c of word.toLowerCase()) {
+      if (!current.children[c]) {
+        return { found: false, path, failChar: c };
+      }
+      path.push({ node: current.children[c], char: c });
+      current = current.children[c];
+    }
+    return { found: current.endOfWord, path, isPrefix: !current.endOfWord };
+  }
+
+  startsWith(prefix) {
+    let current = this.root;
+    const path = [];
+    for (const c of prefix.toLowerCase()) {
+      if (!current.children[c]) {
+        return { found: false, path, failChar: c };
+      }
+      path.push({ node: current.children[c], char: c });
+      current = current.children[c];
+    }
+    return { found: true, path };
+  }
+
+  getWords() {
+    const words = [];
+    const dfs = (node, prefix) => {
+      if (node.endOfWord) words.push(prefix);
+      for (const [c, child] of Object.entries(node.children).sort()) {
+        dfs(child, prefix + c);
+      }
+    };
+    dfs(this.root, '');
+    return words;
+  }
+
+  clear() {
+    this.root = { children: {}, endOfWord: false, id: 'root' };
+    this.nodeCount = 1;
+  }
+}
+
+let trie = new TrieViz();
+let insertedWords = [];
+let animHighlight = [];  // [{nodeId, type}] for highlighting during animations
+let animEdges = [];      // [{fromId, toId, type}]
+let statusMessage = null;
+let animStep = -1;
+let animPlaying = false;
+let animTimer = null;
+let animSteps = [];
+let animSpeed = 600;
+
+// Preset words for demo sections
+const DEMO_WORDS = ['app', 'apple', 'ape', 'bat', 'ball'];
+
+function initDemoTrie() {
+  trie = new TrieViz();
+  insertedWords = [];
+  DEMO_WORDS.forEach(w => {
+    trie.insert(w);
+    insertedWords.push(w);
+  });
+  animHighlight = [];
+  animEdges = [];
+  statusMessage = null;
+}
+
+// ── Layout computation for trie ──
+function computeTrieLayout(node, x, y, xSpread, depth, parentId) {
+  const layout = { nodes: [], edges: [] };
+  const sortedChildren = Object.entries(node.children).sort();
+
+  layout.nodes.push({
+    id: node.id,
+    x, y,
+    label: depth === 0 ? 'root' : '',
+    endOfWord: node.endOfWord,
+    depth
+  });
+
+  if (parentId !== null) {
+    // Edge label is set by caller
+  }
+
+  const childCount = sortedChildren.length;
+  if (childCount === 0) return layout;
+
+  const totalWidth = xSpread * 2;
+  const step = childCount > 1 ? totalWidth / (childCount - 1) : 0;
+  const startX = childCount > 1 ? x - xSpread : x;
+
+  sortedChildren.forEach(([char, child], i) => {
+    const cx = startX + step * i;
+    const cy = y + 70;
+    const nextSpread = Math.max(xSpread / (childCount > 1 ? 1.8 : 1.5), 20);
+
+    layout.edges.push({
+      fromId: node.id,
+      toId: child.id,
+      fromX: x, fromY: y,
+      toX: cx, toY: cy,
+      label: char
+    });
+
+    const childLayout = computeTrieLayout(child, cx, cy, nextSpread, depth + 1, node.id);
+    layout.nodes.push(...childLayout.nodes);
+    layout.edges.push(...childLayout.edges);
+  });
+
+  return layout;
+}
+
+function buildTrieSVG(w, h) {
+  const layout = computeTrieLayout(trie.root, w / 2, 40, Math.min(w / 3, 200), 0, null);
+
+  // Build highlight sets
+  const hlMap = {};
+  animHighlight.forEach(hl => { hlMap[hl.nodeId] = hl.type; });
+  const edgeMap = {};
+  animEdges.forEach(e => { edgeMap[e.fromId + '-' + e.toId] = e.type; });
+
+  let svg = `<svg class="trie-svg" viewBox="0 0 ${w} ${h}">`;
+
+  // Edges
+  layout.edges.forEach(e => {
+    const eKey = e.fromId + '-' + e.toId;
+    let cls = 'edge-line';
+    if (edgeMap[eKey]) cls += ' ' + edgeMap[eKey];
+    const midX = (e.fromX + e.toX) / 2;
+    const midY = (e.fromY + e.toY) / 2;
+    svg += `<line class="${cls}" x1="${e.fromX}" y1="${e.fromY}" x2="${e.toX}" y2="${e.toY}"/>`;
+    svg += `<text x="${midX}" y="${midY - 6}" text-anchor="middle" font-size="13" fill="${edgeMap[eKey] === 'search-hit' ? 'var(--cyan)' : edgeMap[eKey] === 'search-miss' ? 'var(--accent)' : edgeMap[eKey] === 'lit' ? 'var(--accent2)' : 'var(--text-dim)'}" font-weight="700">${e.label}</text>`;
+  });
+
+  // Nodes
+  layout.nodes.forEach(n => {
+    const hl = hlMap[n.id];
+    let fill = 'var(--trie-node)';
+    let stroke = 'var(--border)';
+    let strokeW = 2;
+    let filterStyle = '';
+    let labelColor = 'var(--text)';
+
+    if (n.endOfWord && !hl) {
+      fill = 'var(--trie-end)';
+      stroke = 'var(--trie-end)';
+      filterStyle = 'filter: drop-shadow(0 0 6px var(--trie-end-glow))';
+      labelColor = 'white';
+    }
+
+    if (hl === 'insert') {
+      fill = 'var(--accent2)';
+      stroke = 'var(--accent2)';
+      strokeW = 3;
+      filterStyle = 'style="animation: pulse 1s infinite"';
+      labelColor = 'white';
+    } else if (hl === 'search-hit') {
+      fill = 'var(--trie-search-hit)';
+      stroke = 'var(--trie-search-hit)';
+      strokeW = 3;
+      filterStyle = 'filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.6))';
+      labelColor = 'white';
+    } else if (hl === 'search-miss') {
+      fill = 'var(--trie-search-miss)';
+      stroke = 'var(--trie-search-miss)';
+      strokeW = 3;
+      filterStyle = 'filter: drop-shadow(0 0 8px rgba(233, 69, 96, 0.6))';
+      labelColor = 'white';
+    } else if (hl === 'end-found') {
+      fill = 'var(--green)';
+      stroke = 'var(--green)';
+      strokeW = 3;
+      filterStyle = 'style="animation: pulseGreen 1s infinite"';
+      labelColor = 'white';
+    }
+
+    const r = n.depth === 0 ? 20 : 16;
+
+    // Use style attribute for filter and animation
+    let styleAttr = '';
+    if (filterStyle.startsWith('filter:')) {
+      styleAttr = `style="${filterStyle}"`;
+    } else if (filterStyle.startsWith('style=')) {
+      styleAttr = filterStyle;
+    }
+
+    svg += `<g transform="translate(${n.x},${n.y})">`;
+    svg += `<circle class="node-circle" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}" ${styleAttr}/>`;
+    if (n.depth === 0) {
+      svg += `<text dy="4" text-anchor="middle" font-size="10" fill="${labelColor}">root</text>`;
+    }
+    if (n.endOfWord && !hl) {
+      svg += `<text dy="${r + 14}" text-anchor="middle" font-size="9" fill="var(--green)">END</text>`;
+    }
+    svg += `</g>`;
+  });
+
+  svg += `</svg>`;
+  return svg;
+}
+
+// ── Render ──
+function render() {
+  const app = document.getElementById('root');
+  app.innerHTML = `
+    <header>
+      <h1>Prefix Tree (Trie)</h1>
+      <p>Build, search, and visualize a trie — the data structure behind autocomplete</p>
+    </header>
+    <div class="progress-bar"><div class="fill" style="width: ${((currentSection + 1) / sections.length) * 100}%"></div></div>
+    <nav class="nav">
+      ${sections.map((s, i) => `
+        <button class="${i === currentSection ? 'active' : ''}" onclick="goTo(${i})">${s}</button>
+      `).join('')}
+    </nav>
+    <div class="section">
+      ${renderSection(currentSection)}
+    </div>
+  `;
+  fixCodeBlocks();
+}
+
+function goTo(i) {
+  stopAnim();
+  currentSection = i;
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextSection() {
+  if (currentSection < sections.length - 1) {
+    stopAnim();
+    currentSection++;
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function renderSection(i) {
+  switch (i) {
+    case 0: return renderIdea();
+    case 1: return renderHowItWorks();
+    case 2: return renderTryIt();
+    case 3: return renderCode();
+    case 4: return renderQuizSection();
+  }
+}
+
+// ═══════════════════════════
+// Section 0: The Idea
+// ═══════════════════════════
+function renderIdea() {
+  return `
+    <h2>What Is a Trie?</h2>
+    <p>A <strong>Trie</strong> (pronounced "try") — also called a <span class="accent">Prefix Tree</span> — is a tree-like data structure that stores strings character by character. Each path from root to a marked node spells out a word.</p>
+
+    <div class="analogy">
+      <div class="title">The Dictionary Analogy</div>
+      <p>Imagine a physical dictionary where you look up words letter by letter. You open to the "A" section, then find "AP", then "APP"... A trie works exactly like this — each level is one character deeper into the word.</p>
+    </div>
+
+    <h3>Why Not Just Use a HashSet?</h3>
+    <p>A HashSet can tell you if <code>"apple"</code> exists, but it can't efficiently answer: <em>"What words start with 'app'?"</em></p>
+    <p>A Trie answers prefix queries in <span class="green">O(prefix length)</span> time — regardless of how many words are stored. That's why autocomplete, spell checkers, and IP routing tables use tries.</p>
+
+    <div class="mental-model">
+      <div class="title">Three Core Operations</div>
+      <p><span class="accent">insert(word)</span> — Walk from root, creating child nodes for each character. Mark the last node as "end of word".</p>
+      <p><span class="cyan">search(word)</span> — Walk from root following characters. Return true only if the path exists AND the last node is marked as end of word.</p>
+      <p><span class="green">startsWith(prefix)</span> — Walk from root following characters. Return true if the path exists (doesn't need end-of-word mark).</p>
+    </div>
+
+    <h3>The Key Difference: search vs startsWith</h3>
+    <p>If you insert <code>"apple"</code>, then:</p>
+    <p>• <code>search("app")</code> → <span class="accent">false</span> — "app" exists as a path, but it's not marked as a complete word.</p>
+    <p>• <code>startsWith("app")</code> → <span class="green">true</span> — the prefix path exists, which is all that matters.</p>
+
+    <button class="next-btn" onclick="nextSection()">Next: How It Works →</button>
+  `;
+}
+
+// ═══════════════════════════
+// Section 1: How It Works
+// ═══════════════════════════
+function renderHowItWorks() {
+  // Init demo trie for this section
+  if (insertedWords.length === 0 || insertedWords.join(',') !== DEMO_WORDS.join(',')) {
+    initDemoTrie();
+  }
+
+  return `
+    <h2>Building a Trie Step by Step</h2>
+    <p>Let's insert the words: ${DEMO_WORDS.map(w => `<code>${w}</code>`).join(', ')} and see how the trie grows.</p>
+
+    <div class="trie-container">
+      <div class="trie-viz-container">${buildTrieSVG(700, 420)}</div>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background: var(--trie-node); border-color: var(--border);"></div>
+          <span>Regular node</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background: var(--trie-end); border-color: var(--trie-end);"></div>
+          <span>End of word</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background: var(--accent2); border-color: var(--accent2);"></div>
+          <span>Currently active</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>What Just Happened</h3>
+    <p>Notice how <code>"app"</code>, <code>"apple"</code>, and <code>"ape"</code> share the prefix <code>"ap"</code> — they branch off at different points. This <span class="accent">prefix sharing</span> is what makes tries space-efficient for words with common prefixes.</p>
+
+    <div class="mental-model">
+      <div class="title">The children Array</div>
+      <p>Each node has <code>arrayOfNulls&lt;TrieNode&gt;(26)</code> — one slot per lowercase letter. The index for character <code>c</code> is <code>c - 'a'</code>. So <code>'a'</code> maps to index 0, <code>'b'</code> to 1, and so on.</p>
+      <p style="margin-top: 8px;">This gives us <strong>O(1)</strong> child lookups — no hash collisions, no comparisons. The tradeoff: each node uses 26 pointers (most will be null). For real-world applications, a HashMap-based node is more memory-efficient.</p>
+    </div>
+
+    <h3>Insert Walkthrough: "apple"</h3>
+    <div class="step-trace">Step 1: Start at root
+Step 2: 'a' → root.children[0] exists? No → create TrieNode → move to it
+Step 3: 'p' → children[15] exists? No → create → move
+Step 4: 'p' → children[15] exists? No → create → move
+Step 5: 'l' → children[11] exists? No → create → move
+Step 6: 'e' → children[4] exists? No → create → move
+Step 7: Mark current node as endOfWord = true</div>
+
+    <h3>Now Insert "app" — Prefix Reuse!</h3>
+    <div class="step-trace">Step 1: Start at root
+Step 2: 'a' → root.children[0] exists? YES → just move to it
+Step 3: 'p' → children[15] exists? YES → just move
+Step 4: 'p' → children[15] exists? YES → just move
+Step 5: Mark current node as endOfWord = true
+         (The node already existed! We just marked it.)</div>
+
+    ${renderQuiz('hw_q1',
+      'After inserting "apple" and "app", how many nodes does the trie have (including root)?',
+      [
+        '9 — one for each character in both words',
+        '6 — root + a + p + p + l + e (app shares prefix)',
+        '8 — separate branches for each word',
+        '5 — only unique characters'
+      ],
+      1,
+      '"app" is a prefix of "apple", so it reuses the exact same path. The trie has: root → a → p → p → l → e = 6 nodes total. The node for the second \'p\' is marked endOfWord (for "app"), and the \'e\' node is also marked endOfWord (for "apple"). No extra nodes were created for "app".'
+    )}
+
+    <button class="next-btn" onclick="nextSection()">Next: Try It →</button>
+  `;
+}
+
+// ═══════════════════════════
+// Section 2: Try It (Interactive)
+// ═══════════════════════════
+function renderTryIt() {
+  if (insertedWords.length === 0) {
+    initDemoTrie();
+  }
+
+  return `
+    <h2>Interactive Trie Playground</h2>
+    <p>Insert words, search for them, or check prefixes. Watch the trie grow and light up in real time.</p>
+
+    <div class="controls">
+      <div class="input-group">
+        <input type="text" id="trieInput" placeholder="Type a word..." onkeydown="if(event.key==='Enter'){doInsert()}" maxlength="12">
+      </div>
+      <button onclick="doInsert()">Insert</button>
+      <button class="search-btn" onclick="doSearch()">Search</button>
+      <button class="prefix-btn" onclick="doPrefix()">startsWith</button>
+      <button class="neutral" onclick="doClear()">Clear All</button>
+    </div>
+
+    <div style="font-size: 0.82em; color: var(--text-dim); margin-bottom: 8px;">Words in trie:</div>
+    <div class="word-list">
+      ${insertedWords.length > 0
+        ? insertedWords.map(w => `<span class="word-chip inserted">${w}</span>`).join('')
+        : '<span class="word-chip">empty — insert some words!</span>'
+      }
+    </div>
+
+    <div class="trie-container">
+      <div class="trie-viz-interactive">${buildTrieSVG(700, 420)}</div>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background: var(--trie-node); border-color: var(--border);"></div>
+          <span>Node</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background: var(--trie-end); border-color: var(--trie-end);"></div>
+          <span>End of word</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background: var(--accent2); border-color: var(--accent2);"></div>
+          <span>Insert path</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background: var(--cyan); border-color: var(--cyan);"></div>
+          <span>Search hit</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background: var(--accent); border-color: var(--accent);"></div>
+          <span>Not found</span>
+        </div>
+      </div>
+    </div>
+
+    ${statusMessage ? `<div class="status-msg ${statusMessage.type}">${statusMessage.text}</div>` : ''}
+
+    <button class="next-btn" onclick="nextSection()">Next: Kotlin Code →</button>
+  `;
+}
+
+function doInsert() {
+  const input = document.getElementById('trieInput');
+  const word = (input.value || '').trim().toLowerCase();
+  if (!word || !/^[a-z]+$/.test(word)) {
+    statusMessage = { type: 'error', text: 'Please enter a word with lowercase letters (a-z) only.' };
+    updateTryItViz();
+    return;
+  }
+  if (insertedWords.includes(word)) {
+    statusMessage = { type: 'info', text: `<strong>"${word}"</strong> is already in the trie.` };
+    // Still highlight the path
+    const result = trie.search(word);
+    animHighlight = result.path.map(p => ({ nodeId: p.node.id, type: 'insert' }));
+    animEdges = [];
+    let prev = trie.root;
+    result.path.forEach(p => {
+      animEdges.push({ fromId: prev.id, toId: p.node.id, type: 'lit' });
+      prev = p.node;
+    });
+    updateTryItViz();
+    setTimeout(() => { animHighlight = []; animEdges = []; updateTryItViz(); }, 2000);
+    return;
+  }
+
+  const path = trie.insert(word);
+  insertedWords.push(word);
+  insertedWords.sort();
+
+  // Highlight the inserted path
+  animHighlight = path.map(p => ({ nodeId: p.node.id, type: 'insert' }));
+  animEdges = [];
+  let prev = trie.root;
+  path.forEach(p => {
+    animEdges.push({ fromId: prev.id, toId: p.node.id, type: 'lit' });
+    prev = p.node;
+  });
+
+  statusMessage = { type: 'success', text: `<strong>"${word}"</strong> inserted! ${path.length} nodes in the path.` };
+  updateTryItViz();
+  input.value = '';
+
+  setTimeout(() => { animHighlight = []; animEdges = []; updateTryItViz(); }, 2000);
+}
+
+function doSearch() {
+  const input = document.getElementById('trieInput');
+  const word = (input.value || '').trim().toLowerCase();
+  if (!word || !/^[a-z]+$/.test(word)) {
+    statusMessage = { type: 'error', text: 'Please enter a word with lowercase letters (a-z) only.' };
+    updateTryItViz();
+    return;
+  }
+
+  const result = trie.search(word);
+
+  let prev = trie.root;
+  if (result.found) {
+    animHighlight = result.path.map(p => ({ nodeId: p.node.id, type: 'search-hit' }));
+    animHighlight[animHighlight.length - 1].type = 'end-found';
+    animEdges = [];
+    result.path.forEach(p => {
+      animEdges.push({ fromId: prev.id, toId: p.node.id, type: 'search-hit' });
+      prev = p.node;
+    });
+    statusMessage = { type: 'success', text: `<strong>search("${word}")</strong> → <strong>true</strong>! The word exists in the trie.` };
+  } else if (result.isPrefix) {
+    animHighlight = result.path.map(p => ({ nodeId: p.node.id, type: 'search-hit' }));
+    animHighlight[animHighlight.length - 1].type = 'search-miss';
+    animEdges = [];
+    result.path.forEach(p => {
+      animEdges.push({ fromId: prev.id, toId: p.node.id, type: 'search-hit' });
+      prev = p.node;
+    });
+    statusMessage = { type: 'error', text: `<strong>search("${word}")</strong> → <strong>false</strong>. The path exists but the last node is NOT marked as end-of-word. It\'s a prefix, not a complete word.` };
+  } else {
+    animHighlight = result.path.map(p => ({ nodeId: p.node.id, type: 'search-hit' }));
+    animEdges = [];
+    result.path.forEach(p => {
+      animEdges.push({ fromId: prev.id, toId: p.node.id, type: 'search-hit' });
+      prev = p.node;
+    });
+    statusMessage = { type: 'error', text: `<strong>search("${word}")</strong> → <strong>false</strong>. No child node for '<strong>${result.failChar}</strong>' — the path breaks.` };
+  }
+
+  updateTryItViz();
+  setTimeout(() => { animHighlight = []; animEdges = []; updateTryItViz(); }, 3000);
+}
+
+function doPrefix() {
+  const input = document.getElementById('trieInput');
+  const prefix = (input.value || '').trim().toLowerCase();
+  if (!prefix || !/^[a-z]+$/.test(prefix)) {
+    statusMessage = { type: 'error', text: 'Please enter a prefix with lowercase letters (a-z) only.' };
+    updateTryItViz();
+    return;
+  }
+
+  const result = trie.startsWith(prefix);
+
+  let prev = trie.root;
+  if (result.found) {
+    animHighlight = result.path.map(p => ({ nodeId: p.node.id, type: 'search-hit' }));
+    animEdges = [];
+    result.path.forEach(p => {
+      animEdges.push({ fromId: prev.id, toId: p.node.id, type: 'search-hit' });
+      prev = p.node;
+    });
+    const matchingWords = insertedWords.filter(w => w.startsWith(prefix));
+    statusMessage = { type: 'search-msg', text: `<strong>startsWith("${prefix}")</strong> → <strong>true</strong>! Matching words: ${matchingWords.map(w => '<code>' + w + '</code>').join(', ')}` };
+  } else {
+    animHighlight = result.path.map(p => ({ nodeId: p.node.id, type: 'search-hit' }));
+    animEdges = [];
+    result.path.forEach(p => {
+      animEdges.push({ fromId: prev.id, toId: p.node.id, type: 'search-hit' });
+      prev = p.node;
+    });
+    statusMessage = { type: 'error', text: `<strong>startsWith("${prefix}")</strong> → <strong>false</strong>. No child for '<strong>${result.failChar}</strong>' — prefix doesn't exist.` };
+  }
+
+  updateTryItViz();
+  setTimeout(() => { animHighlight = []; animEdges = []; updateTryItViz(); }, 3000);
+}
+
+function doClear() {
+  trie.clear();
+  insertedWords = [];
+  animHighlight = [];
+  animEdges = [];
+  statusMessage = { type: 'info', text: 'Trie cleared.' };
+  render();
+}
+
+function updateTryItViz() {
+  // Update only the dynamic parts
+  const svgContainer = document.querySelector('.trie-viz-interactive');
+  if (svgContainer) svgContainer.innerHTML = buildTrieSVG(700, 420);
+
+  const wordList = document.querySelector('.word-list');
+  if (wordList) {
+    wordList.innerHTML = insertedWords.length > 0
+      ? insertedWords.map(w => `<span class="word-chip inserted">${w}</span>`).join('')
+      : '<span class="word-chip">empty — insert some words!</span>';
+  }
+
+  // Update status
+  let statusContainer = document.querySelector('.status-msg');
+  if (statusMessage) {
+    if (!statusContainer) {
+      // Insert before next-btn
+      const nextBtn = document.querySelector('.next-btn');
+      if (nextBtn) {
+        const div = document.createElement('div');
+        div.className = `status-msg ${statusMessage.type}`;
+        div.innerHTML = statusMessage.text;
+        nextBtn.parentNode.insertBefore(div, nextBtn);
+      }
+    } else {
+      statusContainer.className = `status-msg ${statusMessage.type}`;
+      statusContainer.innerHTML = statusMessage.text;
+    }
+  } else if (statusContainer) {
+    statusContainer.remove();
+  }
+}
+
+// ═══════════════════════════
+// Section 3: Kotlin Code
+// ═══════════════════════════
+function renderCode() {
+  return `
+    <h2>Kotlin Implementation</h2>
+
+    <h3>TrieNode</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin</span>
+<span class="kw">class</span> <span class="tp">TrieNode</span> {
+    <span class="kw">val</span> children = <span class="fn">arrayOfNulls</span>&lt;<span class="tp">TrieNode</span>&gt;(<span class="nm">26</span>)
+    <span class="kw">var</span> endOfWord = <span class="kw">false</span>
+}
+    </div>
+
+    <p>Each node holds 26 pointers (one per lowercase letter) and a boolean flag. Simple but effective.</p>
+
+    <h3>Insert</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — insert</span>
+<span class="kw">fun</span> <span class="fn">insert</span>(word: <span class="tp">String</span>) {
+    <span class="kw">var</span> current = root
+    word.<span class="fn">forEach</span> { c ->
+        <span class="kw">val</span> i = c - <span class="st">'a'</span>                   <span class="cm">// char → index (0-25)</span>
+        <span class="kw">if</span> (current.children[i] == <span class="kw">null</span>) {
+            current.children[i] = <span class="fn">TrieNode</span>()  <span class="cm">// create if missing</span>
+        }
+        current = current.children[i]!!      <span class="cm">// move down</span>
+    }
+    current.endOfWord = <span class="kw">true</span>               <span class="cm">// mark end</span>
+}
+    </div>
+
+    <div class="mental-model">
+      <div class="title">The !! is Safe Here</div>
+      <p>We just checked <code>children[i] == null</code> and created a node if needed. So <code>children[i]!!</code> is guaranteed non-null. This is a common Kotlin pattern — null-check + create, then assert.</p>
+    </div>
+
+    <h3>Search</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — search</span>
+<span class="kw">fun</span> <span class="fn">search</span>(word: <span class="tp">String</span>): <span class="tp">Boolean</span> {
+    <span class="kw">var</span> cur = root
+    word.<span class="fn">forEach</span> { c ->
+        <span class="kw">val</span> i = c - <span class="st">'a'</span>
+        <span class="kw">if</span> (cur.children[i] == <span class="kw">null</span>) {
+            <span class="kw">return false</span>                  <span class="cm">// path breaks → not found</span>
+        }
+        cur = cur.children[i]!!
+    }
+    <span class="kw">return</span> cur.endOfWord                  <span class="cm">// must be end of a complete word</span>
+}
+    </div>
+
+    <h3>Starts With (Prefix Search)</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — startsWith</span>
+<span class="kw">fun</span> <span class="fn">startsWith</span>(prefix: <span class="tp">String</span>): <span class="tp">Boolean</span> {
+    <span class="kw">var</span> cur = root
+    prefix.<span class="fn">forEach</span> { c ->
+        <span class="kw">val</span> i = c - <span class="st">'a'</span>
+        <span class="kw">if</span> (cur.children[i] == <span class="kw">null</span>) {
+            <span class="kw">return false</span>                  <span class="cm">// path breaks</span>
+        }
+        cur = cur.children[i]!!
+    }
+    <span class="kw">return true</span>                            <span class="cm">// don't check endOfWord!</span>
+}
+    </div>
+
+    <div class="analogy">
+      <div class="title">Spot the One-Line Difference</div>
+      <p><code>search()</code> returns <code>cur.endOfWord</code> — the path must end at a complete word.</p>
+      <p><code>startsWith()</code> returns <code>true</code> — just finding the path is enough.</p>
+      <p style="margin-top: 8px;">This mirrors the DFS vs BFS one-line difference from the previous lesson. Often, the most powerful changes in algorithms are tiny.</p>
+    </div>
+
+    <h3>Complete Class</h3>
+    <div class="code-block">
+      <span class="lang-tag">Kotlin — PrefixTree</span>
+<span class="kw">class</span> <span class="tp">TrieNode</span> {
+    <span class="kw">val</span> children = <span class="fn">arrayOfNulls</span>&lt;<span class="tp">TrieNode</span>&gt;(<span class="nm">26</span>)
+    <span class="kw">var</span> endOfWord = <span class="kw">false</span>
+}
+
+<span class="kw">class</span> <span class="tp">PrefixTree</span> {
+    <span class="kw">private val</span> root = <span class="fn">TrieNode</span>()
+
+    <span class="kw">fun</span> <span class="fn">insert</span>(word: <span class="tp">String</span>) {
+        <span class="kw">var</span> current = root
+        word.<span class="fn">forEach</span> { c ->
+            <span class="kw">val</span> i = c - <span class="st">'a'</span>
+            <span class="kw">if</span> (current.children[i] == <span class="kw">null</span>) {
+                current.children[i] = <span class="fn">TrieNode</span>()
+            }
+            current = current.children[i]!!
+        }
+        current.endOfWord = <span class="kw">true</span>
+    }
+
+    <span class="kw">fun</span> <span class="fn">search</span>(word: <span class="tp">String</span>): <span class="tp">Boolean</span> {
+        <span class="kw">var</span> cur = root
+        word.<span class="fn">forEach</span> { c ->
+            <span class="kw">val</span> i = c - <span class="st">'a'</span>
+            <span class="kw">if</span> (cur.children[i] == <span class="kw">null</span>) {
+                <span class="kw">return false</span>
+            }
+            cur = cur.children[i]!!
+        }
+        <span class="kw">return</span> cur.endOfWord
+    }
+
+    <span class="kw">fun</span> <span class="fn">startsWith</span>(prefix: <span class="tp">String</span>): <span class="tp">Boolean</span> {
+        <span class="kw">var</span> cur = root
+        prefix.<span class="fn">forEach</span> { c ->
+            <span class="kw">val</span> i = c - <span class="st">'a'</span>
+            <span class="kw">if</span> (cur.children[i] == <span class="kw">null</span>) {
+                <span class="kw">return false</span>
+            }
+            cur = cur.children[i]!!
+        }
+        <span class="kw">return true</span>
+    }
+}
+    </div>
+
+    <h3>Complexity</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0;">
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center;">
+        <div style="font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 6px;">Insert</div>
+        <div style="font-size: 1.3em; font-weight: 700; color: var(--accent2);">O(m)</div>
+        <div style="font-size: 0.78em; color: var(--text-dim); margin-top: 4px;">m = word length</div>
+      </div>
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center;">
+        <div style="font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 6px;">Search</div>
+        <div style="font-size: 1.3em; font-weight: 700; color: var(--cyan);">O(m)</div>
+        <div style="font-size: 0.78em; color: var(--text-dim); margin-top: 4px;">m = word length</div>
+      </div>
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center;">
+        <div style="font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 6px;">Space</div>
+        <div style="font-size: 1.3em; font-weight: 700; color: var(--green);">O(n × 26)</div>
+        <div style="font-size: 0.78em; color: var(--text-dim); margin-top: 4px;">n = total nodes</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="nextSection()">Next: Quiz →</button>
+  `;
+}
+
+// ═══════════════════════════
+// Section 4: Quiz
+// ═══════════════════════════
+function renderQuizSection() {
+  const qs = ['fq1','fq2','fq3','fq4','fq5'];
+  const answered = qs.filter(q => quizAnswers[q] !== undefined).length;
+  const correct = qs.filter(q => quizAnswers[q] === true).length;
+
+  return `
+    <h2>Final Quiz</h2>
+    <p>Five questions to test your understanding of tries.</p>
+    ${answered === qs.length ? `<div style="display:inline-flex;align-items:center;gap:8px;background:var(--surface2);padding:6px 14px;border-radius:20px;font-size:0.85em;color:var(--green);margin-bottom:16px;">Score: ${correct}/${qs.length} ${correct === qs.length ? '— Perfect!' : correct >= 4 ? '— Solid!' : '— Review the earlier sections'}</div>` : ''}
+
+    ${renderQuiz('fq1',
+      'You insert "car", "card", "care", "cars" into a trie. How many nodes have endOfWord = true?',
+      [
+        '1 — only "cars" (the last inserted)',
+        '4 — each word marks its own endpoint',
+        '3 — "car" shares with "card"',
+        '2 — only the leaf nodes'
+      ],
+      1,
+      'Each word marks its own last node as endOfWord = true. "car" marks the \'r\' node, "card" marks the \'d\' node, "care" marks the \'e\' node, and "cars" marks the \'s\' node. All four are independent endpoints.'
+    )}
+
+    ${renderQuiz('fq2',
+      'After inserting "apple" and "application", you call search("app"). What happens?',
+      [
+        'Returns true — "app" is in the trie',
+        'Returns false — the path exists but endOfWord is false at the second \'p\'',
+        'Throws an error — word too short',
+        'Returns true — it\'s a prefix of existing words'
+      ],
+      1,
+      'The path root → a → p → p exists, but we never inserted "app" as a word, so endOfWord = false at that node. search() checks endOfWord, so it returns false. startsWith("app") would return true though!'
+    )}
+
+    ${renderQuiz('fq3',
+      'What is the time complexity of searching for a word of length m in a trie containing n words?',
+      [
+        'O(n) — must check all words',
+        'O(n × m) — check each word character by character',
+        'O(m) — just follow the path, independent of n',
+        'O(log n) — like binary search'
+      ],
+      2,
+      'This is the trie\'s superpower. Regardless of whether the trie stores 100 words or 1 million, searching for "apple" always takes exactly 5 steps (one per character). The number of stored words doesn\'t affect search time.'
+    )}
+
+    ${renderQuiz('fq4',
+      'Why does TrieNode use arrayOfNulls<TrieNode>(26) instead of a HashMap<Char, TrieNode>?',
+      [
+        'HashMap is not available in Kotlin',
+        'Array gives O(1) access via index arithmetic (c - \'a\'), simpler and faster for lowercase-only inputs',
+        'Array uses less memory than HashMap',
+        'HashMap would change the time complexity'
+      ],
+      1,
+      'With only 26 possible children (lowercase letters), direct array indexing is simpler and faster — no hashing overhead. The tradeoff is that each node allocates 26 slots even if most are null. For larger alphabets (Unicode), a HashMap would be more memory-efficient.'
+    )}
+
+    ${renderQuiz('fq5',
+      'You\'re building autocomplete for a search engine. Which method would you call when the user types "hel"?',
+      [
+        'search("hel") — check if it\'s a word',
+        'startsWith("hel") — check if any words have this prefix',
+        'insert("hel") — add it to the trie',
+        'Both search and startsWith'
+      ],
+      1,
+      'startsWith("hel") tells you if any stored words begin with "hel" (like "hello", "help", "helicopter"). In practice, you\'d extend this to also collect all words under that prefix node, but the basic check is startsWith.'
+    )}
+
+    ${answered === qs.length ? `
+    <div class="mental-model" style="margin-top: 30px;">
+      <div class="title">Trie Cheat Sheet</div>
+      <p><strong>Need fast prefix lookup?</strong> → Trie</p>
+      <p><strong>Need exact word lookup only?</strong> → HashSet (simpler)</p>
+      <p><strong>Need autocomplete / suggestions?</strong> → Trie + DFS from prefix node</p>
+      <p><strong>Small alphabet (a-z)?</strong> → Array-based children</p>
+      <p><strong>Large alphabet (Unicode)?</strong> → HashMap-based children</p>
+      <p><strong>Memory is tight?</strong> → Consider compressed tries (radix trees)</p>
+    </div>
+    ` : ''}
+  `;
+}
+
+// ═══════════════════════════
+// Quiz Component
+// ═══════════════════════════
+function renderQuiz(id, question, options, correctIdx, explanation) {
+  const answered = quizAnswers[id] !== undefined;
+  const selectedIdx = quizAnswers[id + '_sel'];
+
+  return `
+    <div class="quiz-card">
+      <h4>Quiz</h4>
+      <div class="question">${question}</div>
+      <div class="quiz-options">
+        ${options.map((opt, i) => {
+          let cls = '';
+          if (answered) {
+            if (i === correctIdx) cls = 'correct';
+            else if (i === selectedIdx && i !== correctIdx) cls = 'wrong';
+          }
+          return `<button class="quiz-option ${cls}" ${answered ? 'disabled' : ''} onclick="answerQuiz('${id}', ${i}, ${correctIdx})">${opt}</button>`;
+        }).join('')}
+      </div>
+      ${answered ? `<div class="quiz-explanation ${quizAnswers[id] ? 'correct' : 'wrong'}">${quizAnswers[id] ? '&#10003; Correct!' : '&#10007; Not quite.'} ${explanation}</div>` : ''}
+    </div>
+  `;
+}
+
+function answerQuiz(id, selected, correct) {
+  quizAnswers[id] = selected === correct;
+  quizAnswers[id + '_sel'] = selected;
+  render();
+}
+
+// ── Animation helpers ──
+function stopAnim() {
+  if (animTimer) clearTimeout(animTimer);
+  animPlaying = false;
+  animHighlight = [];
+  animEdges = [];
+}
+
+// ── Fix code block indentation ──
+function fixCodeBlocks() {
+  document.querySelectorAll('.code-block, .step-trace').forEach(block => {
+    const html = block.innerHTML;
+    const lines = html.split('\n');
+    while (lines.length && lines[0].trim() === '') lines.shift();
+    while (lines.length && lines[lines.length - 1].trim() === '') lines.pop();
+    const contentLines = lines.filter(l => l.trim() !== '' && !l.trim().match(/^<span class="lang-tag">.*<\/span>$/));
+    const indents = contentLines.map(l => {
+      const match = l.match(/^( *)/);
+      return match ? match[1].length : 0;
+    });
+    const minIndent = Math.min(...indents);
+    if (minIndent > 0) {
+      const fixed = lines.map(l => {
+        let stripped = 0;
+        let i = 0;
+        while (i < l.length && l[i] === ' ' && stripped < minIndent) { i++; stripped++; }
+        return l.slice(i);
+      });
+      block.innerHTML = fixed.join('\n');
+    } else {
+      block.innerHTML = lines.join('\n');
+    }
+  });
+}
+
+// ── Init ──
+render();
+</script>
+</body>
+</html>

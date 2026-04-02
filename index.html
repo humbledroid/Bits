@@ -341,6 +341,12 @@
         <span class="badge badge-new">New</span>
       </a>
 
+      <a class="nav-item" data-topic="prefix-tree" onclick="loadTopic('prefix-tree', this)">
+        <span class="icon">&#x1f332;</span>
+        <span class="label">Prefix Tree (Trie)</span>
+        <span class="badge badge-new">New</span>
+      </a>
+
       <a class="nav-item disabled" data-topic="null-safety">
         <span class="icon">&#x1f6e1;</span>
         <span class="label">Null Safety</span>
@@ -427,6 +433,11 @@
           <div class="card-title">DFS vs BFS</div>
           <div class="card-desc">Tree traversals visualized as LED bulbs lighting up — with stack & queue animations.</div>
         </div>
+        <div class="topic-card" onclick="loadTopic('prefix-tree')">
+          <div class="card-icon">&#x1f332;</div>
+          <div class="card-title">Prefix Tree (Trie)</div>
+          <div class="card-desc">Build, search, and visualize a trie — the data structure behind autocomplete.</div>
+        </div>
         <div class="topic-card disabled">
           <div class="card-icon">&#x1f6e1;</div>
           <div class="card-title">Null Safety</div>
@@ -455,6 +466,7 @@
   const topicMap = {
     'recursion': 'recursion/index.html',
     'graph-traversal': 'graph-traversal/index.html',
+    'prefix-tree': 'prefix-tree/index.html',
   };
 
   let activeTopic = null;
